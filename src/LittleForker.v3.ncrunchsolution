@@ -1,0 +1,8 @@
+﻿<SolutionConfiguration>
+  <Settings>
+    <AllowParallelTestExecution>False</AllowParallelTestExecution>
+    <AllowTestsToRunInParallelWithThemselves>False</AllowTestsToRunInParallelWithThemselves>
+    <MaxNumberOfProcessingThreads>1</MaxNumberOfProcessingThreads>
+    <SolutionConfigured>True</SolutionConfigured>
+  </Settings>
+</SolutionConfiguration>

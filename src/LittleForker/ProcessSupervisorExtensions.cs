@@ -1,12 +1,17 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace LittleForker
 {
     public static  class ProcessSupervisorExtensions
     {
-        public static Task WhenStateIs(this ProcessSupervisor processSupervisor, ProcessSupervisor.State processState)
+        public static Task WhenStateIs(
+            this ProcessSupervisor processSupervisor,
+            ProcessSupervisor.State processState,
+            CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<int>();
+            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
 
             void Handler(ProcessSupervisor.State state)
             {
@@ -18,12 +23,17 @@ namespace LittleForker
             }
 
             processSupervisor.StateChanged += Handler;
+
             return taskCompletionSource.Task;
         }
 
-        public static Task WhenOutputStartsWith(this ProcessSupervisor processSupervisor, string startsWith)
+        public static Task WhenOutputStartsWith(
+            this ProcessSupervisor processSupervisor,
+            string startsWith,
+            CancellationToken cancellationToken)
         {
             var taskCompletionSource = new TaskCompletionSource<int>();
+            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
 
             void Handler(string data)
             {

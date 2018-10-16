@@ -22,7 +22,11 @@ namespace build
 
             Target(Clean, () =>
             {
-                DirectoryInfo di = new DirectoryInfo(ArtifactsDir);
+                if (!Directory.Exists(ArtifactsDir))
+                {
+                    return;
+                }
+                var di = new DirectoryInfo(ArtifactsDir);
                 foreach (var file in di.GetFiles())
                 {
                     file.Delete(); 

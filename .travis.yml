@@ -1,6 +1,8 @@
-language: minimal
-sudo: required
+language: csharp
 dist: trusty
+sudo: false
+mono: none
+dotnet: 2.1.402
 script: "./build.sh"
 env:
   global:

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Authors>Damian Hickey</Authors>
+    <PackageProjectUrl>https://github.com/damianh/LittleForker</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/damianh/LittleForker/blob/master/LICENSE</PackageLicenseUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageTags>child-process;process-manager</PackageTags>
+    <NoWarn>1701;1702;1705;1591</NoWarn>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+</Project>

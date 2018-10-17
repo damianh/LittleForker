@@ -1,13 +1,16 @@
-# Little Forker
-An exploration in the launching and supervision of processes. Written to scratch
-and itch where the primary use case is installing a single service (on windows)
-who then spawns other process as part of a multi-process application. Shared as
-code for now, maybe a nuget package if deemed useful later.
+# Little Forker [![Build Status](https://travis-ci.org/damianh/LittleForker.svg?branch=master)](https://travis-ci.org/damianh/LittleForker)
+
+A utility to aid in the launching and supervision of processes. The primary use
+case is installing a single service who then spawns other processes as part of a
+multi-process application.
+
+A package is available on my personal CI feed:
+https://www.myget.org/F/dh/api/v3/index.json 
 
 ## Features
 
   1. Define and start a process passing in args and environment variables.
-  2. Track the state of the process with a state machine.
+  2. Track the state of the process via state machine.
   3. Attach and capture a process's standard output.
   4. A named piped based IPC mechanism for the supervisor to signal an `EXIT` to a
      process to allow for cooperative shutdown.
@@ -28,7 +31,7 @@ code for now, maybe a nuget package if deemed useful later.
     pipe and thus faciliting a clean shutdown. 
  4. Using `ProcessMonitor` and `CooperativeShutdown` in an application:
     https://github.com/damianh/LittleForker/blob/master/src/NonTerminatingProcess/Program.cs#L28-L30
- 5. Explore [the tests](src/LittleForker.Tests/) to see how it works pending better samples.
+ 5. Explore [the tests](src/LittleForker.Tests/) to see how it works.
 
 ## Process State Machine
 
@@ -36,7 +39,8 @@ code for now, maybe a nuget package if deemed useful later.
 
 ## Building
 
-Run `build.ps1` to compile and run tests.
+- Requires .NET Core 2.0 SDK or later
+- Run `build.cmd` to compile, run tests and build package.
 
 ## Ideas
 

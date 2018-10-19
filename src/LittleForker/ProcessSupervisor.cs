@@ -135,7 +135,7 @@ namespace LittleForker
 
             _processStateMachine.OnTransitioned(transition =>
             {
-                _logger.Info($"State transiton from {transition.Source} to {transition.Destination}");
+                _logger.Info($"State transition from {transition.Source} to {transition.Destination}");
                 StateChanged?.Invoke(transition.Destination);
             });
         }

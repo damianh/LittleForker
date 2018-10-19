@@ -8,7 +8,7 @@ namespace LittleForker
         public static Task WhenStateIs(
             this ProcessSupervisor processSupervisor,
             ProcessSupervisor.State processState,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var taskCompletionSource = new TaskCompletionSource<int>();
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());

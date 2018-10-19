@@ -24,6 +24,7 @@ namespace LittleForker
             = new StateMachine<State, Trigger>(State.NotStarted, FiringMode.Queued);
         private readonly string _workingDirectory;
         private Process _process;
+        private readonly object _lockObject = new object();
 
         /// <summary>
         ///     The state a process is in.
@@ -66,7 +67,9 @@ namespace LittleForker
         ///     Environment variables that are set before the process starts.
         /// </param>
         /// <param name="parentProcessId">
-        ///     The ID of a parent process to monitor. This is the passed to process as an environment variable to facilite
+        ///     The ID of a parent process to monitor. This is the passed to
+        ///     process as an environment variable to facilitate child shut down
+        ///     in the event the parent terminates in appropriately.
         /// </param>
         public ProcessSupervisor(
             ProcessRunType processRunType,
@@ -155,7 +158,13 @@ namespace LittleForker
         /// <summary>
         ///     Starts the process.
         /// </summary>
-        public void Start() => _processStateMachine.Fire(Trigger.Start);
+        public void Start()
+        {
+            lock (_lockObject)
+            {
+                _processStateMachine.Fire(Trigger.Start);
+            }
+        }
 
         /// <summary>
         ///     Initiates a process stop. If a timeout is supplied (and greater
@@ -169,7 +178,13 @@ namespace LittleForker
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        public Task Stop(TimeSpan? timeout = null) => _processStateMachine.FireAsync(_stopTrigger, timeout);
+        public Task Stop(TimeSpan? timeout = null)
+        {
+            lock (_lockObject)
+            {
+                return _processStateMachine.FireAsync(_stopTrigger, timeout);
+            }
+        }
 
         private void OnStart()
         {
@@ -208,7 +223,13 @@ namespace LittleForker
                     EnableRaisingEvents = true
                 };
                 _process.OutputDataReceived += (_, args) => OutputDataReceived?.Invoke(args.Data);
-                _process.Exited += (sender, args) => _processStateMachine.Fire(Trigger.ProcessExit);
+                _process.Exited += (sender, args) =>
+                {
+                    lock (_lockObject)
+                    {
+                        _processStateMachine.FireAsync(Trigger.ProcessExit);
+                    }
+                }; // Multi-threaded access ?
                 _process.Start();
                 _process.BeginOutputReadLine();
                 ProcessInfo = new ProcessInfo(_process);
@@ -216,7 +237,10 @@ namespace LittleForker
             catch (Exception ex)
             {
                 _logger.ErrorException("Failed to start process.", ex);
-                _processStateMachine.Fire(_startErrorTrigger, ex);
+                lock (_lockObject)
+                {
+                    _processStateMachine.Fire(_startErrorTrigger, ex);
+                }
             }
         }
         
@@ -240,7 +264,7 @@ namespace LittleForker
                 {
                     _logger.WarnException(
                         $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                        "in the a race condition where rocess has already exited and an attempt to kill it.",
+                        "in the a race condition where process has already exited and an attempt to kill it.",
                         ex);
                 }
             }
@@ -248,12 +272,12 @@ namespace LittleForker
             {
                 try
                 {
-                    // Signal process to exit. If no reesponse from process (busy or
+                    // Signal process to exit. If no response from process (busy or
                     // doesn't support signaling, then this will timeout. Note: a
                     // process acknowledging that it has received an EXIT signal
                     // only means the process has _started_ to shut down.
 
-                    // TODO detect if the app hasn't shut down in the alloted time and if so, kill it.
+                    // TODO detect if the app hasn't shut down in the allotted time and if so, kill it.
                     await CooperativeShutdown.SignalExit(ProcessInfo.Id).TimeoutAfter(timeout.Value);
                 }
                 catch (TimeoutException)
@@ -270,7 +294,7 @@ namespace LittleForker
                     {
                         _logger.WarnException(
                             $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                            "in the a race condition where rocess has already exited and an attempt to kill it.",
+                            "in the a race condition where process has already exited and an attempt to kill it.",
                             ex);
                     }
                 }

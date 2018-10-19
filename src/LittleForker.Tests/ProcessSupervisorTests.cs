@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
 using LittleForker.Infra;
 using LittleForker.Logging;
@@ -47,11 +48,13 @@ namespace LittleForker
         [Fact]
         public async Task Given_short_running_exe_then_should_run_to_exit()
         {
+            var envVars = new StringDictionary {{"a", "b"}};
             var supervisor = new ProcessSupervisor(
                 ProcessRunType.SelfTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
-                "./SelfTerminatingProcess/SelfTerminatingProcess.dll");
+                "./SelfTerminatingProcess/SelfTerminatingProcess.dll",
+                envVars);
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var whenStateIsExited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
 

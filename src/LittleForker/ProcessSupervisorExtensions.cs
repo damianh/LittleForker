@@ -30,7 +30,7 @@ namespace LittleForker
         public static Task WhenOutputStartsWith(
             this ProcessSupervisor processSupervisor,
             string startsWith,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
         {
             var taskCompletionSource = new TaskCompletionSource<int>();
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());

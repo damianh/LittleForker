@@ -8,12 +8,12 @@ using Xunit.Abstractions;
 
 namespace LittleForker
 {
-    public class MonitorParentProcessTests : IDisposable
+    public class ProcessExitedHelperTests : IDisposable
     {
         private readonly ITestOutputHelper _outputHelper;
         private readonly IDisposable _logCapture;
 
-        public MonitorParentProcessTests(ITestOutputHelper outputHelper)
+        public ProcessExitedHelperTests(ITestOutputHelper outputHelper)
         {
             _outputHelper = outputHelper;
             _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
@@ -23,10 +23,11 @@ namespace LittleForker
         public async Task When_parent_process_does_not_exist_then_should_call_parent_exited_callback()
         {
             var parentExited = new TaskCompletionSource<int?>();
-            var monitorParentProcess = new ProcessMonitor(-1, pid => parentExited.SetResult(pid));
-
-            var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
-            processId.ShouldBe(-1);
+            using (new ProcessExitedHelper(-1, watcher => parentExited.SetResult(watcher.ProcessId)))
+            {
+                var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
+                processId.ShouldBe(-1);
+            }
         }
 
         [Fact]
@@ -45,7 +46,7 @@ namespace LittleForker
 
             // Monitor parent
             var parentExited = new TaskCompletionSource<int?>();
-            using (new ProcessMonitor(supervisor.ProcessInfo.Id, pid => parentExited.SetResult(pid)))
+            using (new ProcessExitedHelper(supervisor.ProcessInfo.Id, watcher => parentExited.SetResult(watcher.ProcessId)))
             {
                 // Stop parent
                 await supervisor.Stop(TimeSpan.FromSeconds(2));

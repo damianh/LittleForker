@@ -16,7 +16,6 @@ namespace LittleForker
         private readonly ILog _logger;
         private readonly string _arguments;
         private readonly StringDictionary _environmentVariables;
-        private readonly int? _parentProcessId;
         private readonly string _processPath;
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<TimeSpan?> _stopTrigger;
@@ -66,24 +65,17 @@ namespace LittleForker
         /// <param name="environmentVariables">
         ///     Environment variables that are set before the process starts.
         /// </param>
-        /// <param name="parentProcessId">
-        ///     The ID of a parent process to monitor. This is the passed to
-        ///     process as an environment variable to facilitate child shut down
-        ///     in the event the parent terminates in appropriately.
-        /// </param>
         public ProcessSupervisor(
             ProcessRunType processRunType,
             string workingDirectory,
             string processPath,
             string arguments = null,
-            StringDictionary environmentVariables = null,
-            int? parentProcessId = null)
+            StringDictionary environmentVariables = null)
         {
             _workingDirectory = workingDirectory;
             _processPath = processPath;
             _arguments = arguments ?? string.Empty;
             _environmentVariables = environmentVariables;
-            _parentProcessId = parentProcessId;
 
             _logger = LogProvider.GetLogger($"ProcessSupervisor-{processPath}");
 
@@ -147,7 +139,16 @@ namespace LittleForker
 
         public IProcessInfo ProcessInfo { get; private set; }
 
-        public State CurrentState => _processStateMachine.State;
+        public State CurrentState
+        {
+            get
+            {
+                lock (_lockObject)
+                { 
+                    return _processStateMachine.State;
+                }
+            }
+        }
 
         public event Action<string> OutputDataReceived;
 
@@ -207,13 +208,6 @@ namespace LittleForker
                     {
                         processStartInfo.EnvironmentVariables.Add(key, _environmentVariables[key]);
                     }
-                }
-
-                if (_parentProcessId.HasValue)
-                {
-                    processStartInfo.EnvironmentVariables.Add(
-                        Constants.ProcessIdEnvironmentVariable,
-                        _parentProcessId.Value.ToString());
                 }
 
                 // Start the process and capture it's output.

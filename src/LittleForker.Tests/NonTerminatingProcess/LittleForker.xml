@@ -36,21 +36,23 @@
             <param name="processId">The process ID to signal too.</param>
             <returns>A task represnting the operation.</returns>
         </member>
-        <member name="T:LittleForker.ProcessMonitor">
+        <member name="T:LittleForker.ProcessExitedHelper">
             <summary>
-                Monitors a process and raises event when the process has exited.
+                Helper that raises event when the process has exited. A wrapper around
+                Process.Exited with some error handling and logging.
             </summary>
         </member>
-        <member name="M:LittleForker.ProcessMonitor.#ctor(System.Int32,System.Action{System.Int32})">
+        <member name="M:LittleForker.ProcessExitedHelper.#ctor(System.Int32,System.Action{LittleForker.ProcessExitedHelper})">
             <summary>
-                Initializes a new instance of <see cref="T:LittleForker.ProcessMonitor"/>
+                Initializes a new instance of <see cref="T:LittleForker.ProcessExitedHelper"/>
             </summary>
             <param name="processId">
-                The process Id of the process to monitor.
+                The process Id of the process to watch for exited.
             </param>
             <param name="processExited">
                 A callback that is invoked when process has exited or does not
-                exist.
+                exist with the <see cref="T:LittleForker.ProcessExitedHelper"/> instance as a
+                parameter.
             </param>
         </member>
         <member name="T:LittleForker.ProcessRunType">

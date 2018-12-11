@@ -52,11 +52,12 @@ namespace NonTerminatingProcess
             {
                 using (await CooperativeShutdown.Listen(ExitRequested))
                 {
-                    if (_shutdown.IsCancellationRequested)
+                    while(!_shutdown.IsCancellationRequested)
                     {
-                        return;
+                        Log.Information(_shutdown.IsCancellationRequested.ToString());
+                        await Task.Delay(100);
                     }
-                    await Task.Delay(100);
+                    Log.Information("Exiting.");
                 }
             }
         }

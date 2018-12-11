@@ -47,7 +47,7 @@ namespace NonTerminatingProcess
             var parentPid = _configRoot.GetValue<int?>("ParentProcessId");
 
             using (parentPid.HasValue
-                ? new ProcessMonitor(parentPid.Value, _ => ParentExited(parentPid.Value))
+                ? new ProcessExitedHelper(parentPid.Value, _ => ParentExited(parentPid.Value))
                 : NoopDisposable.Instance)
             {
                 using (await CooperativeShutdown.Listen(ExitRequested))

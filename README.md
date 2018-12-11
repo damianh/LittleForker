@@ -40,7 +40,7 @@ It wraps `Process.Exited` with some additional behavior:
    result in an `InvalidOperationException`
  - Logging.
 
-Honestly it is something simple to implement in your own code so you may
+This something simple to implement in your own code so you may
 consider copying it if you don't want a dependency on `LittleForker`.
 
 Typically you will tell a process to monitor another process by passing in the
@@ -154,7 +154,7 @@ shut down. Different to `SIGTERM` and `Process.Kill()` in that it allows a child
 to acknowledge recipt of the request and clean up cleanly. Combined with 
 `Supervisor.Stop()` a parent can send the signal and then wait for `ExitedSuccessfully`.
 
-The inter process communication is done via named pipes where the pipe name is
+The inter-process communication is done via named pipes where the pipe name is
 of the format `LittleForker-{processId}`
 
 For a "child" process to be able receive co-operative shut down requests it uses 

@@ -62,7 +62,7 @@ namespace LittleForker
 
             supervisor.Start();
 
-            var task = await Task.WhenAny(whenStateIsExited, whenStateIsExited);
+            var task = await Task.WhenAny(whenStateIsExited, whenStateIsExitedWithError);
 
             task.ShouldBe(whenStateIsExited);
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
@@ -79,13 +79,13 @@ namespace LittleForker
                 "dotnet",
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2($"Process: {data}");
-            var stateIsRunning = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
-            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+            var running = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
+            var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.Start();
-            await stateIsRunning;
+            await running;
 
-            await supervisor.Stop(TimeSpan.FromSeconds(2));
-            await stateIsStopped;
+            await supervisor.Stop(TimeSpan.FromSeconds(4));
+            await exitedSuccessfully;
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.OnStartException.ShouldBeNull();

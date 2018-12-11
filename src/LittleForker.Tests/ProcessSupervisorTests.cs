@@ -21,15 +21,17 @@ namespace LittleForker
         }
 
         [Fact]
-        public void Given_invalid_process_path_then_state_should_be_StartError()
+        public async Task Given_invalid_process_path_then_state_should_be_StartError()
         {
             var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, "c:/", "invalid.exe");
+            var stateIsStartFailed = supervisor.WhenStateIs(ProcessSupervisor.State.StartFailed);
             supervisor.Start();
 
+            await stateIsStartFailed;
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
-            supervisor.Exception.ShouldNotBeNull();
+            supervisor.OnStartException.ShouldNotBeNull();
 
-            _outputHelper.WriteLine(supervisor.Exception.ToString());
+            _outputHelper.WriteLine(supervisor.OnStartException.ToString());
         }
 
         [Fact]
@@ -39,9 +41,9 @@ namespace LittleForker
             supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
-            supervisor.Exception.ShouldNotBeNull();
+            supervisor.OnStartException.ShouldNotBeNull();
 
-            _outputHelper.WriteLine(supervisor.Exception.ToString());
+            _outputHelper.WriteLine(supervisor.OnStartException.ToString());
         }
 
         [Fact]
@@ -56,12 +58,15 @@ namespace LittleForker
                 envVars);
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var whenStateIsExited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+            var whenStateIsExitedWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
 
             supervisor.Start();
-            await whenStateIsExited;
 
+            var task = await Task.WhenAny(whenStateIsExited, whenStateIsExited);
+
+            task.ShouldBe(whenStateIsExited);
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Exception.ShouldBeNull();
+            supervisor.OnStartException.ShouldBeNull();
             supervisor.ProcessInfo.ExitCode.ShouldBe(0);
         }
 
@@ -83,7 +88,7 @@ namespace LittleForker
             await stateIsStopped;
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Exception.ShouldBeNull();
+            supervisor.OnStartException.ShouldBeNull();
             supervisor.ProcessInfo.ExitCode.ShouldBe(0);
         }
         
@@ -141,12 +146,12 @@ namespace LittleForker
             supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
-            supervisor.Exception.ShouldNotBeNull();
+            supervisor.OnStartException.ShouldNotBeNull();
 
             supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
-            supervisor.Exception.ShouldNotBeNull();
+            supervisor.OnStartException.ShouldNotBeNull();
         }
 
         [Fact]

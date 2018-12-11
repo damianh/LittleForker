@@ -20,7 +20,7 @@ namespace LittleForker
         ///     Initializes a new instance of <see cref="ProcessExitedHelper"/>
         /// </summary>
         /// <param name="processId">
-        ///     The process Id of the process to monitor.
+        ///     The process Id of the process to watch for exited.
         /// </param>
         /// <param name="processExited">
         ///     A callback that is invoked when process has exited or does not
@@ -39,7 +39,7 @@ namespace LittleForker
                 OnProcessExit();
                 return;
             }
-            Logger.Info($"Process with Id {processId} found. Monitoring exited event.");
+            Logger.Info($"Process with Id {processId} found.");
             try
             {
                 _process.EnableRaisingEvents = true;

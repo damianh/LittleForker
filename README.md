@@ -54,7 +54,6 @@ Here we extract the CLI arg using `Microsoft.Extensions.Configuration`, watch
 for a parent to exit and exit ourselves when that happens.
 
 ```csharp
-// 
 var configRoot = new ConfigurationBuilder()
    .AddCommandLine(args)
    .Build();

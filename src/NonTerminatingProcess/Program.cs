@@ -1,62 +1,86 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using LittleForker;
+using Microsoft.Extensions.Configuration;
 using Serilog;
 
 namespace NonTerminatingProcess
 {
     internal sealed class Program
     {
-        static async Task Main(string[] args)
+        // Yeah this process is supposed to be "non-terminating"
+        // but we don't want tons of orphaned instances running
+        // because of tests so it terminates after a long
+        // enough time (100 seconds)
+        private readonly CancellationTokenSource _shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(100));
+        private readonly IConfigurationRoot _configRoot;
+
+        static Program()
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateLogger();
+        }
 
-            var pid = Process.GetCurrentProcess().Id;
-            Log.Logger.Information($"Long running process started. PID={pid}");
+        private Program(string[] args)
+        {
+            _configRoot = new ConfigurationBuilder()
+                .AddCommandLine(args)
+                .AddEnvironmentVariables()
+                .Build();
 
-            if (args.Contains("--debug"))
+            // Running program with --debug=true will attach a debugger.
+            // Used to assist with debugging LittleForker.
+            if (_configRoot.GetValue("debug", false)) 
             {
                 Debugger.Launch();
             }
+        }
 
-            try
+        private async Task Run()
+        {
+            var pid = Process.GetCurrentProcess().Id;
+            Log.Logger.Information($"Long running process started. PID={pid}");
+
+            var parentPid = _configRoot.GetValue<int?>("ParentProcessId");
+
+            using (parentPid.HasValue
+                ? new ProcessMonitor(parentPid.Value, _ => ParentExited(parentPid.Value))
+                : NoopDisposable.Instance)
             {
-                using (new ProcessMonitor(ParentExited))
+                using (await CooperativeShutdown.Listen(ExitRequested))
                 {
-                    using (await CooperativeShutdown.Listen(ExitRequested))
+                    if (_shutdown.IsCancellationRequested)
                     {
-                        var stopWatch = Stopwatch.StartNew();
-                        // Yeah this process is supposed to be "non-terminating"
-                        // but we don't want tons of stray instances running
-                        // because of tests so it terminates after a long
-                        // enough time.
-                        while (stopWatch.Elapsed < TimeSpan.FromSeconds(100))
-                        {
-                            await Task.Delay(100);
-                        }
+                        return;
                     }
+                    await Task.Delay(100);
                 }
             }
-            catch (Exception ex)
-            {
-                Log.Logger.Error(ex, ex.Message);
-            }
         }
 
-        private static void ExitRequested()
+        static Task Main(string[] args) => new Program(args).Run();
+
+        private void ExitRequested()
         {
             Log.Logger.Information("Cooperative shutdown requested.");
-            Environment.Exit(0);
+            _shutdown.Cancel();
         }
 
-        private static void ParentExited(int? processId)
+        private void ParentExited(int processId)
         {
             Log.Logger.Information($"Parent process {processId} exited.");
-            Environment.Exit(0);
+            _shutdown.Cancel();
+        }
+
+        private class NoopDisposable : IDisposable
+        {
+            public void Dispose()
+            {}
+
+            internal static readonly IDisposable Instance = new NoopDisposable();
         }
     }
 }

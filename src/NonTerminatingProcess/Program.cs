@@ -54,7 +54,6 @@ namespace NonTerminatingProcess
                 {
                     while(!_shutdown.IsCancellationRequested)
                     {
-                        Log.Information(_shutdown.IsCancellationRequested.ToString());
                         await Task.Delay(100);
                     }
                     Log.Information("Exiting.");

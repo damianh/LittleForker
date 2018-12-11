@@ -7,28 +7,31 @@ using LittleForker.Logging;
 namespace LittleForker
 {
     /// <summary>
-    ///     Monitors a process and raises event when the process has exited.
+    ///     Helper that raises event when the process has exited. A wrapper around
+    ///     Process.Exited with some error handling and logging.
     /// </summary>
-    public sealed class ProcessMonitor : IDisposable
+    public sealed class ProcessExitedHelper : IDisposable
     {
         private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
         private int _processExitedRaised;
         private readonly Process _process;
 
         /// <summary>
-        ///     Initializes a new instance of <see cref="ProcessMonitor"/>
+        ///     Initializes a new instance of <see cref="ProcessExitedHelper"/>
         /// </summary>
         /// <param name="processId">
         ///     The process Id of the process to monitor.
         /// </param>
         /// <param name="processExited">
         ///     A callback that is invoked when process has exited or does not
-        ///     exist.
+        ///     exist with the <see cref="ProcessExitedHelper"/> instance as a
+        ///     parameter.
         /// </param>
-        public ProcessMonitor(
+        public ProcessExitedHelper(
             int processId,
-            Action<int> processExited)
+            Action<ProcessExitedHelper> processExited)
         {
+            ProcessId = processId;
             _process = Process.GetProcesses().SingleOrDefault(pr => pr.Id == processId);
             if (_process == null)
             {
@@ -65,10 +68,12 @@ namespace LittleForker
                 if (Interlocked.CompareExchange(ref _processExitedRaised, 1, 0) == 0) // Ensure raised once
                 {
                     Logger.Info("Raising process exited.");
-                    processExited(processId);
+                    processExited(this);
                 }
             }
         }
+
+        public int ProcessId { get; }
 
         public void Dispose()
         {

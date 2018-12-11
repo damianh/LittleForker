@@ -16,10 +16,6 @@ namespace build
 
         static void Main(string[] args)
         {
-            var travisBuildNumber = Environment.GetEnvironmentVariable("TRAVIS_BUILD_NUMBER");
-            var buildNumber = travisBuildNumber ?? "0";
-            var versionSuffix = "build" + buildNumber.PadLeft(5, '0');
-
             Target(Clean, () =>
             {
                 if (!Directory.Exists(ArtifactsDir))
@@ -49,7 +45,7 @@ namespace build
                 Pack,
                 DependsOn(Build),
                 ForEach("LittleForker"),
-                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o ../../{ArtifactsDir} --no-build --version-suffix {versionSuffix}"));
+                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o ../../{ArtifactsDir} --no-build"));
 
             Target(Publish, DependsOn(Pack), () =>
             {

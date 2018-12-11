@@ -10,8 +10,8 @@ multi-process application.
      logging and event raising if the process has already existed or not found.
 
   2. **ProcessSupervisor**: allows a parent process to launch a child process
-     and track it's lifecycle which is represented as a state machine.
-     Supervisors can participate in co-operative shutdown.
+     and lifecycle is represented as a state machine. Supervisors can participate
+     in co-operative shutdown if supported by the child process.
 
   3. **CooperativeShutdown**: allows a process to listen for a shutdown signal
      over a NamedPipe or for a process to instruct a process to shutdown.

@@ -18,7 +18,6 @@ namespace LittleForker
         {
             _outputHelper = outputHelper;
             _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
-            Environment.SetEnvironmentVariable(Constants.ProcessIdEnvironmentVariable, null);
         }
 
         [Fact]

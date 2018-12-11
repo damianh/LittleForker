@@ -17,31 +17,16 @@ namespace LittleForker
         {
             _outputHelper = outputHelper;
             _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
-            Environment.SetEnvironmentVariable(Constants.ProcessIdEnvironmentVariable, null);
         }
 
         [Fact]
         public async Task When_parent_process_does_not_exist_then_should_call_parent_exited_callback()
         {
             var parentExited = new TaskCompletionSource<int?>();
-            var monitorParentProcess = new ProcessMonitor(
-                pid => parentExited.SetResult(pid),
-                -1);
+            var monitorParentProcess = new ProcessMonitor(-1, pid => parentExited.SetResult(pid));
 
             var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
             processId.ShouldBe(-1);
-        }
-
-        [Fact]
-        public async Task Should_fall_back_to_enviroment_variable()
-        {
-            var parentExited = new TaskCompletionSource<int?>();
-            Environment.SetEnvironmentVariable(Constants.ProcessIdEnvironmentVariable, "-101");
-            var monitorParentProcess = new ProcessMonitor(
-                pid => parentExited.SetResult(pid));
-
-            var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
-            processId.ShouldBe(-101);
         }
 
         [Fact]
@@ -60,9 +45,7 @@ namespace LittleForker
 
             // Monitor parent
             var parentExited = new TaskCompletionSource<int?>();
-            using (new ProcessMonitor(
-                pid => parentExited.SetResult(pid),
-                supervisor.ProcessInfo.Id))
+            using (new ProcessMonitor(supervisor.ProcessInfo.Id, pid => parentExited.SetResult(pid)))
             {
                 // Stop parent
                 await supervisor.Stop(TimeSpan.FromSeconds(2));
@@ -90,8 +73,7 @@ namespace LittleForker
                 ProcessRunType.SelfTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
-                "./NonTerminatingProcess/NonTerminatingProcess.dll",
-                parentProcessId: parentSupervisor.ProcessInfo.Id);
+                $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo.Id}");
             childSupervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Child: {data}");
             var childIsRunning = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
             var childHasStopped = childSupervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);

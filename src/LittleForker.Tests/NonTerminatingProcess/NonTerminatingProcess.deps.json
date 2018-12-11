@@ -1,23 +1,24 @@
 {
   "runtimeTarget": {
     "name": ".NETCoreApp,Version=v2.1",
-    "signature": "b5ab3158efc245851bf9923a157ec6e8b071cc6a"
+    "signature": "ed1034f285f2f9c9fcde3f682ede6b8bf325fbb8"
   },
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v2.1": {
-      "NonTerminatingProcess/0.1.0": {
+      "NonTerminatingProcess/1.0.0": {
         "dependencies": {
-          "LittleForker": "0.1.0",
+          "LittleForker": "1.0.0",
           "Microsoft.Extensions.Configuration.Binder": "2.2.0",
           "Microsoft.Extensions.Configuration.CommandLine": "2.2.0",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "2.2.0",
           "Serilog.Sinks.Console": "3.1.1"
         },
         "runtime": {
           "NonTerminatingProcess.dll": {}
         }
       },
-      "LibLog/5.0.2": {
+      "LibLog/5.0.3": {
         "dependencies": {
           "Microsoft.CSharp": "4.4.0"
         }
@@ -62,6 +63,17 @@
         },
         "runtime": {
           "lib/netstandard2.0/Microsoft.Extensions.Configuration.CommandLine.dll": {
+            "assemblyVersion": "2.2.0.0",
+            "fileVersion": "2.2.0.18315"
+          }
+        }
+      },
+      "Microsoft.Extensions.Configuration.EnvironmentVariables/2.2.0": {
+        "dependencies": {
+          "Microsoft.Extensions.Configuration": "2.2.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.Extensions.Configuration.EnvironmentVariables.dll": {
             "assemblyVersion": "2.2.0.0",
             "fileVersion": "2.2.0.18315"
           }
@@ -351,9 +363,9 @@
           "System.Runtime": "4.3.0"
         }
       },
-      "LittleForker/0.1.0": {
+      "LittleForker/1.0.0": {
         "dependencies": {
-          "LibLog": "5.0.2",
+          "LibLog": "5.0.3",
           "Stateless": "4.2.1"
         },
         "runtime": {
@@ -363,17 +375,17 @@
     }
   },
   "libraries": {
-    "NonTerminatingProcess/0.1.0": {
+    "NonTerminatingProcess/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "LibLog/5.0.2": {
+    "LibLog/5.0.3": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-JlRPCxczOy03KNjpl6YM01U7qhokexKozjs8m/jA4g48p+/SvlFstM4POJtzzxzs/Zw3DngM34tyOUu0fOfmQw==",
-      "path": "liblog/5.0.2",
-      "hashPath": "liblog.5.0.2.nupkg.sha512"
+      "sha512": "sha512-geVzbeOap+rCRzxM26chKxT9kGoj/ZUXDKOK5g1x0iD8NhWNiqWOIgKUAPw0osF9OMzggraDmfvEE5M1GEmDaA==",
+      "path": "liblog/5.0.3",
+      "hashPath": "liblog.5.0.3.nupkg.sha512"
     },
     "Microsoft.CSharp/4.4.0": {
       "type": "package",
@@ -409,6 +421,13 @@
       "sha512": "sha512-Lto/5Kk1VMEah6OlATtXGkyfaTNkmAdzlPBeMAk8MYNRL5w0SnxJKYlvmOrW/xz0CT6esRE/pL9fXlw8vTRuLg==",
       "path": "microsoft.extensions.configuration.commandline/2.2.0",
       "hashPath": "microsoft.extensions.configuration.commandline.2.2.0.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Configuration.EnvironmentVariables/2.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-nIQTzgq/qwRTDvAP299SSrFeqXJHhPzw+a6tDPwhvWwcA095KrJYGhAwYy/aer6UB4Q9T7s5va6q7MhgrelrAg==",
+      "path": "microsoft.extensions.configuration.environmentvariables/2.2.0",
+      "hashPath": "microsoft.extensions.configuration.environmentvariables.2.2.0.nupkg.sha512"
     },
     "Microsoft.Extensions.Primitives/2.2.0": {
       "type": "package",
@@ -648,7 +667,7 @@
       "path": "system.threading.tasks/4.3.0",
       "hashPath": "system.threading.tasks.4.3.0.nupkg.sha512"
     },
-    "LittleForker/0.1.0": {
+    "LittleForker/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

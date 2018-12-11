@@ -163,11 +163,42 @@
             </summary>
             <param name="key">A key.</param>
             <param name="value">A value.</param>
+            <param name="destructure">Determines whether to call the destructor or not.</param>
             <returns>A disposable that when disposed removes the map from the context.</returns>
         </member>
         <member name="T:LittleForker.Logging.LogLevel">
             <summary>
                 The log level.
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Trace">
+            <summary>
+            Trace
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Debug">
+            <summary>
+            Debug
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Info">
+            <summary>
+            Info
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Warn">
+            <summary>
+            Warn
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Error">
+            <summary>
+            Error
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Fatal">
+            <summary>
+            Fatal
             </summary>
         </member>
         <member name="T:LittleForker.Logging.LogProvider">
@@ -241,6 +272,24 @@
             <param name="destructure">A optional paramater to indicate message should be destructured.</param>
             <returns>An <see cref="T:System.IDisposable"/> that closes context when disposed.</returns>
         </member>
+        <member name="T:LittleForker.Logging.LogProviders.LibLogException">
+            <summary>
+            Exception thrown by LibLog.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LibLogException.#ctor(System.String)">
+            <summary>
+            Initializes a new LibLogException with the specified message.
+            </summary>
+            <param name="message">The message</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LibLogException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new LibLogException with the specified message and inner exception.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="inner">The inner exception.</param>
+        </member>
         <member name="M:LittleForker.Logging.LogProviders.LogMessageFormatter.SimulateStructuredLogging(System.Func{System.String},System.Object[])">
             <summary>
                 Some logging frameworks support structured logging, such as serilog. This will allow you to add names to structured
@@ -267,6 +316,16 @@
             <value>
                 <c>true</c> if [provider is available override]; otherwise, <c>false</c>.
             </value>
+        </member>
+        <member name="T:LittleForker.Logging.Logger">
+            <summary>
+            Logger delegate.
+            </summary>
+            <param name="logLevel">The log level</param>
+            <param name="messageFunc">The message function</param>
+            <param name="exception">The exception</param>
+            <param name="formatParameters">The format parameters</param>
+            <returns>A boolean.</returns>
         </member>
     </members>
 </doc>

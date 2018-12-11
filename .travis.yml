@@ -2,7 +2,7 @@ language: csharp
 dist: trusty
 sudo: false
 mono: none
-dotnet: 2.2.100
+dotnet: 2.1.500
 script: "./build.sh"
 git:
   depth: false

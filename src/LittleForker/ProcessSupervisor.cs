@@ -9,7 +9,7 @@ using Stateless.Graph;
 namespace LittleForker
 {
     /// <summary>
-    ///     A process supervisor manages and monitors a processes running state.
+    ///     Launches an process and tracks it's lifecycle .
     /// </summary>
     public class ProcessSupervisor
     {
@@ -135,8 +135,15 @@ namespace LittleForker
             });
         }
 
-        public Exception Exception { get; private set; }
+        /// <summary>
+        ///     Contains the caught exception in the event a process failed to
+        ///     be launched.
+        /// </summary>
+        public Exception OnStartException { get; private set; }
 
+        /// <summary>
+        ///     Information about the launched process.
+        /// </summary>
         public IProcessInfo ProcessInfo { get; private set; }
 
         public State CurrentState
@@ -150,8 +157,14 @@ namespace LittleForker
             }
         }
 
+        /// <summary>
+        ///     Raised when the process emits console data.
+        /// </summary>
         public event Action<string> OutputDataReceived;
 
+        /// <summary>
+        ///     Raised when the process state has changed.
+        /// </summary>
         public event Action<State> StateChanged;
 
         public string GetDotGraph() => UmlDotGraph.Format(_processStateMachine.GetInfo());
@@ -189,7 +202,7 @@ namespace LittleForker
 
         private void OnStart()
         {
-            Exception = null;
+            OnStartException = null;
             try
             {
                 var processStartInfo = new ProcessStartInfo(_processPath)
@@ -240,7 +253,7 @@ namespace LittleForker
         
         private void OnStartError(Exception ex)
         {
-            Exception = ex;
+            OnStartException = ex;
             _process?.Dispose();
             ProcessInfo = null;
         }

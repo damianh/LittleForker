@@ -80,9 +80,9 @@ processes.
 
 There are two classes of processes that are supported:
 
-    1. **Self-Terminating** where the process will exit of it's own accord.
-    2. **Non-Terminating** is a process that never shurt down unless it is
-       signaled to (if it particpates in co-operative shutdown) _or_ is killed.
+1. **Self-Terminating** where the process will exit of it's own accord.
+2. **Non-Terminating** is a process that never shurt down unless it is
+   signaled to (if it particpates in co-operative shutdown) _or_ is killed.
 
 A process's state is represented by `ProcessSupervisor.State` enum:
 

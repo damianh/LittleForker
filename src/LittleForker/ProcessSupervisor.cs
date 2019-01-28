@@ -16,6 +16,7 @@ namespace LittleForker
         private readonly ILog _logger;
         private readonly string _arguments;
         private readonly StringDictionary _environmentVariables;
+        private readonly bool _captureStdErr;
         private readonly string _processPath;
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<TimeSpan?> _stopTrigger;
@@ -70,12 +71,14 @@ namespace LittleForker
             string workingDirectory,
             string processPath,
             string arguments = null,
-            StringDictionary environmentVariables = null)
+            StringDictionary environmentVariables = null,
+            bool captureStdErr = false)
         {
             _workingDirectory = workingDirectory;
             _processPath = processPath;
             _arguments = arguments ?? string.Empty;
             _environmentVariables = environmentVariables;
+            _captureStdErr = captureStdErr;
 
             _logger = LogProvider.GetLogger($"ProcessSupervisor-{processPath}");
 
@@ -162,6 +165,12 @@ namespace LittleForker
         /// </summary>
         public event Action<string> OutputDataReceived;
 
+
+        /// <summary>
+        ///     Raised when the process emits stderr console data.
+        /// </summary>
+        public event Action<string> ErrorDataReceived;
+
         /// <summary>
         ///     Raised when the process state has changed.
         /// </summary>
@@ -209,6 +218,7 @@ namespace LittleForker
                 {
                     Arguments = _arguments,
                     RedirectStandardOutput = true,
+                    RedirectStandardError = _captureStdErr,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = _workingDirectory
@@ -230,6 +240,10 @@ namespace LittleForker
                     EnableRaisingEvents = true
                 };
                 _process.OutputDataReceived += (_, args) => OutputDataReceived?.Invoke(args.Data);
+                if (_captureStdErr)
+                {
+                    _process.ErrorDataReceived += (_, args) => ErrorDataReceived?.Invoke(args.Data);
+                }
                 _process.Exited += (sender, args) =>
                 {
                     lock (_lockObject)
@@ -239,6 +253,11 @@ namespace LittleForker
                 }; // Multi-threaded access ?
                 _process.Start();
                 _process.BeginOutputReadLine();
+                if (_captureStdErr)
+                {
+                    _process.BeginErrorReadLine();
+                }
+
                 ProcessInfo = new ProcessInfo(_process);
             }
             catch (Exception ex)

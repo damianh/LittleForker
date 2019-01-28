@@ -162,6 +162,12 @@ namespace LittleForker
         /// </summary>
         public event Action<string> OutputDataReceived;
 
+
+        /// <summary>
+        ///     Raised when the process emits stderr console data.
+        /// </summary>
+        public event Action<string> ErrorDataReceived;
+
         /// <summary>
         ///     Raised when the process state has changed.
         /// </summary>
@@ -209,6 +215,7 @@ namespace LittleForker
                 {
                     Arguments = _arguments,
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = _workingDirectory
@@ -230,6 +237,7 @@ namespace LittleForker
                     EnableRaisingEvents = true
                 };
                 _process.OutputDataReceived += (_, args) => OutputDataReceived?.Invoke(args.Data);
+                _process.ErrorDataReceived += (_, args) => ErrorDataReceived?.Invoke(args.Data);
                 _process.Exited += (sender, args) =>
                 {
                     lock (_lockObject)
@@ -239,6 +247,7 @@ namespace LittleForker
                 }; // Multi-threaded access ?
                 _process.Start();
                 _process.BeginOutputReadLine();
+                _process.BeginErrorReadLine();
                 ProcessInfo = new ProcessInfo(_process);
             }
             catch (Exception ex)

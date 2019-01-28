@@ -253,7 +253,11 @@ namespace LittleForker
                 }; // Multi-threaded access ?
                 _process.Start();
                 _process.BeginOutputReadLine();
-                _process.BeginErrorReadLine();
+                if (_captureStdErr)
+                {
+                    _process.BeginErrorReadLine();
+                }
+
                 ProcessInfo = new ProcessInfo(_process);
             }
             catch (Exception ex)

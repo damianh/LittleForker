@@ -37,7 +37,7 @@ namespace LittleForker
 
             void Handler(string data)
             {
-                if (data.StartsWith(startsWith))
+                if (data != null && data.StartsWith(startsWith))
                 {
                     taskCompletionSource.SetResult(0);
                     processSupervisor.OutputDataReceived -= Handler;

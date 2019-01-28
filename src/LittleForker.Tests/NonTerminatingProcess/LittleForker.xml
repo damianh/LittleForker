@@ -36,6 +36,16 @@
             <param name="processId">The process ID to signal too.</param>
             <returns>A task represnting the operation.</returns>
         </member>
+        <member name="P:LittleForker.IProcessInfo.ExitCode">
+            <summary>
+                The process's exit code.
+            </summary>
+        </member>
+        <member name="P:LittleForker.IProcessInfo.Id">
+            <summary>
+                The process's Id.
+            </summary>
+        </member>
         <member name="T:LittleForker.ProcessExitedHelper">
             <summary>
                 Helper that raises event when the process has exited. A wrapper around
@@ -73,7 +83,7 @@
         </member>
         <member name="T:LittleForker.ProcessSupervisor">
             <summary>
-                A process supervisor manages and monitors a processes running state.
+                Launches an process and tracks it's lifecycle .
             </summary>
         </member>
         <member name="T:LittleForker.ProcessSupervisor.State">
@@ -81,7 +91,7 @@
                 The state a process is in.
             </summary>
         </member>
-        <member name="M:LittleForker.ProcessSupervisor.#ctor(LittleForker.ProcessRunType,System.String,System.String,System.String,System.Collections.Specialized.StringDictionary)">
+        <member name="M:LittleForker.ProcessSupervisor.#ctor(LittleForker.ProcessRunType,System.String,System.String,System.String,System.Collections.Specialized.StringDictionary,System.Boolean)">
             <summary>
                 Initializes a new instance of <see cref="T:LittleForker.ProcessSupervisor"/>
             </summary>
@@ -100,6 +110,32 @@
             <param name="environmentVariables">
                 Environment variables that are set before the process starts.
             </param>
+        </member>
+        <member name="P:LittleForker.ProcessSupervisor.OnStartException">
+            <summary>
+                Contains the caught exception in the event a process failed to
+                be launched.
+            </summary>
+        </member>
+        <member name="P:LittleForker.ProcessSupervisor.ProcessInfo">
+            <summary>
+                Information about the launched process.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.OutputDataReceived">
+            <summary>
+                Raised when the process emits console data.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.ErrorDataReceived">
+            <summary>
+                Raised when the process emits stderr console data.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.StateChanged">
+            <summary>
+                Raised when the process state has changed.
+            </summary>
         </member>
         <member name="M:LittleForker.ProcessSupervisor.Start">
             <summary>

@@ -229,7 +229,7 @@ namespace LittleForker
                 {
                     foreach (string key in _environmentVariables.Keys)
                     {
-                        processStartInfo.EnvironmentVariables.Add(key, _environmentVariables[key]);
+                        processStartInfo.EnvironmentVariables[key] = _environmentVariables[key];
                     }
                 }
 

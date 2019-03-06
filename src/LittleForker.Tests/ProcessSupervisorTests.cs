@@ -112,7 +112,7 @@ namespace LittleForker
         [Fact]
         public async Task Can_restart_a_stopped_long_running_process()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./LongRunningProcess/LongRunningProcess.dll");
+            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.Start();
@@ -129,7 +129,7 @@ namespace LittleForker
         [Fact]
         public async Task When_stop_a_non_terminating_process_then_should_exit_successfully()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./LongRunningProcess/LongRunningProcess.dll");
+            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.Start();

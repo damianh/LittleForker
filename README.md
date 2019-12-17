@@ -14,7 +14,7 @@ multi-process application.
      in co-operative shutdown if supported by the child process.
 
   3. **CooperativeShutdown**: allows a process to listen for a shutdown signal
-     over a NamedPipe or for a process to instruct a process to shutdown.
+     over a NamedPipe for a parent process to instruct a process to shutdown.
 
 ## Installation
 

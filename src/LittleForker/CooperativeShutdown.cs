@@ -30,16 +30,29 @@ namespace LittleForker
         ///     The callback that is invoked when cooperative shutdown has been
         ///     requested.
         /// </param>
+        /// <param name="onError">A method to be called if an error occurs while listening</param>
         /// <returns>
         ///     A disposable representing the named pipe listener.
         /// </returns>
-        public static async Task<IDisposable> Listen(Action shutdownRequested)
+        public static Task<IDisposable> Listen(Action shutdownRequested, Action<Exception> onError = default)
         {
             var listener = new CooperativeShutdownListener(
                 GetPipeName(Process.GetCurrentProcess().Id),
                 shutdownRequested);
-            await listener.Listen();
-            return listener;
+            
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await listener.Listen();
+                }
+                catch (Exception ex)
+                {
+                    onError?.Invoke(ex);
+                }
+            });
+
+            return Task.FromResult((IDisposable)listener);
         }
 
         /// <summary>
@@ -89,9 +102,7 @@ namespace LittleForker
         {
             private readonly string _pipeName;
             private readonly Action _shutdownRequested;
-            private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
             private readonly CancellationTokenSource _stopListening;
-            private TaskCompletionSource<int> _listening;
 
             internal CooperativeShutdownListener(
                 string pipeName,
@@ -102,47 +113,63 @@ namespace LittleForker
                 _stopListening = new CancellationTokenSource();
             }
 
-            internal Task Listen()
+            internal async Task Listen()
             {
-                _listening = new TaskCompletionSource<int>();
-                Task.Run(async () =>
+                while (!_stopListening.IsCancellationRequested)
                 {
-                    NamedPipeServerStream pipe;
-                    try
-                    {
-                        pipe = new NamedPipeServerStream(_pipeName, PipeDirection.InOut);
-                    }
-                    catch (Exception ex)
-                    {
-                        _listening.SetException(ex);
-                        throw;
-                    }
-                    _listening.SetResult(0);
+                    // message transmission mode is not supported on Unix
+                    var pipe = new NamedPipeServerStream(_pipeName,
+                        PipeDirection.InOut,
+                        NamedPipeServerStream.MaxAllowedServerInstances,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.None);
+
                     Logger.Info($"Listening on pipe '{_pipeName}'.");
+
                     await pipe.WaitForConnectionAsync(_stopListening.Token);
                     Logger.Info($"Client connected to pipe '{_pipeName}'.");
-                    using (var reader = new StreamReader(pipe))
+
+                    try
                     {
-                        using (var writer = new StreamWriter(pipe))
+                        using (var reader = new StreamReader(pipe))
                         {
-
-                            var s = "";
-                            while (s != "EXIT")
+                            using (var writer = new StreamWriter(pipe) { AutoFlush = true })
                             {
-                                s = await reader.ReadLineAsync().WithCancellation(_stopListening.Token);
-                                Logger.Info($"Received command from server: {s}");
+                                while (true)
+                                {
+                                    // a pipe can get disconnected after OS pipes enumeration as well
+                                    if (!pipe.IsConnected)
+                                    {
+                                        Logger.Debug($"Pipe {_pipeName} connection is broken re-connecting");
+                                        break;
+                                    }
+
+                                    var s = await reader.ReadLineAsync().WithCancellation(_stopListening.Token);
+
+                                    if (s != "EXIT")
+                                    {
+                                        continue;
+                                    }
+
+                                    Logger.Info($"Received command from server: {s}");
+
+                                    await writer.WriteLineAsync("OK");
+                                    Logger.Info("Responded with OK");
+
+                                    Logger.Info("Raising exit request...");
+                                    _shutdownRequested();
+
+                                    return;
+                                }
                             }
-
-                            await writer.WriteLineAsync("OK");
-                            await writer.FlushAsync();
-                            Logger.Info("Responded with OK");
-
-                            Logger.Info("Raising exit request...");
-                            _shutdownRequested();
                         }
                     }
-                });
-                return _listening.Task;
+                    catch (IOException ex)
+                    {
+                        // As the pipe connection should be restored this exception should not be considered as terminating
+                        Logger.Debug(ex, "Pipe connection failed");
+                    }
+                }
             }
 
             public void Dispose()

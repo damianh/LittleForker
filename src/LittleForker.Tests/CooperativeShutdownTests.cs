@@ -19,7 +19,7 @@ namespace LittleForker
         }
 
         [Fact]
-        public async Task When_server_signals_exit_then_should_notifiy_client_to_exit()
+        public async Task When_server_signals_exit_then_should_notify_client_to_exit()
         {
             var exitCalled = new TaskCompletionSource<bool>();
             var listener = await CooperativeShutdown.Listen(
@@ -27,7 +27,7 @@ namespace LittleForker
 
             await CooperativeShutdown.SignalExit(Process.GetCurrentProcess().Id);
 
-            (await exitCalled.Task.TimeoutAfter(TimeSpan.FromSeconds(2))).ShouldBeTrue();
+            (await exitCalled.Task).ShouldBeTrue();
 
             listener.Dispose();
         }

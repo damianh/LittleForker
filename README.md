@@ -40,7 +40,7 @@ It wraps `Process.Exited` with some additional behavior:
    result in an `InvalidOperationException`
  - Logging.
 
-This something simple to implement in your own code so you may
+This is something simple to implement in your own code so you may
 consider copying it if you don't want a dependency on `LittleForker`.
 
 Typically you will tell a process to monitor another process by passing in the
@@ -73,15 +73,15 @@ a `CancellationTokenSource`.
 
 ### 2. ProcessSupervisor
 
-Process supervisor launches a process and tracks it's lifecycle represented by a
-statemachine. Typically used by "parent" processes launching one or more "child"
+Process supervisor launches a process and tracks it's lifecycle that is represented by a
+statemachine. Typically use case is a "parent" processes launching one or more "child"
 processes.
 
-There are two classes of processes that are supported:
+There are two types of processes that are supported:
 
 1. **Self-Terminating** where the process will exit of it's own accord.
 2. **Non-Terminating** is a process that never shut down unless it is
-   signaled to (if it participates in co-operative shutdown) _or_ is killed.
+   signaled to do so (if it participates in co-operative shutdown) _or_ is killed.
 
 A process's state is represented by `ProcessSupervisor.State` enum:
 

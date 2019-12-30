@@ -8,36 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\NonTerminatingProcess\bin\LittleForker.xml" Link="NonTerminatingProcess\LittleForker.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.deps.json" Link="NonTerminatingProcess\NonTerminatingProcess.deps.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.runtimeconfig.dev.json" Link="NonTerminatingProcess\NonTerminatingProcess.runtimeconfig.dev.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.runtimeconfig.json" Link="NonTerminatingProcess\NonTerminatingProcess.runtimeconfig.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.xml" Link="NonTerminatingProcess\NonTerminatingProcess.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.deps.json" Link="SelfTerminatingProcess\SelfTerminatingProcess.deps.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.runtimeconfig.dev.json" Link="SelfTerminatingProcess\SelfTerminatingProcess.runtimeconfig.dev.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.runtimeconfig.json" Link="SelfTerminatingProcess\SelfTerminatingProcess.runtimeconfig.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.xml" Link="SelfTerminatingProcess\SelfTerminatingProcess.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
     <PackageReference Include="Shouldly" Version="3.0.2" />
     <PackageReference Include="xunit.core" Version="2.4.1" />
@@ -51,6 +21,7 @@
     <ProjectReference Include="..\LittleForker\LittleForker.csproj" />
   </ItemGroup>
 
+  
   <ItemGroup>
     <None Update="NonTerminatingProcess\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -60,25 +31,5 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\NonTerminatingProcess\bin\LittleForker.dll" Link="NonTerminatingProcess\LittleForker.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\NonTerminatingProcess\bin\LittleForker.pdb" Link="NonTerminatingProcess\LittleForker.pdb">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.dll" Link="NonTerminatingProcess\NonTerminatingProcess.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\NonTerminatingProcess\bin\NonTerminatingProcess.pdb" Link="NonTerminatingProcess\NonTerminatingProcess.pdb">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.dll" Link="SelfTerminatingProcess\SelfTerminatingProcess.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\SelfTerminatingProcess\bin\SelfTerminatingProcess.pdb" Link="SelfTerminatingProcess\SelfTerminatingProcess.pdb">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 
 </Project>

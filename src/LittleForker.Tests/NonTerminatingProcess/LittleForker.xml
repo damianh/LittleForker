@@ -1,0 +1,796 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>LittleForker</name>
+    </assembly>
+    <members>
+        <member name="T:LittleForker.CooperativeShutdown">
+            <summary>
+                Allows a process to be co-operatively shut down (as opposed the more
+                brutal Process.Kill()
+            </summary>
+        </member>
+        <member name="M:LittleForker.CooperativeShutdown.GetPipeName(System.Int32)">
+            <summary>
+                The pipe name a process will listen on for a EXIT signal.
+            </summary>
+            <param name="processId">The process ID process listening.</param>
+            <returns>A generated pipe name.</returns>
+        </member>
+        <member name="M:LittleForker.CooperativeShutdown.Listen(System.Action,System.Action{System.Exception})">
+            <summary>
+                Creates a listener for cooperative shutdown.
+            </summary>
+            <param name="shutdownRequested">
+                The callback that is invoked when cooperative shutdown has been
+                requested.
+            </param>
+            <param name="onError">A method to be called if an error occurs while listening</param>
+            <returns>
+                A disposable representing the named pipe listener.
+            </returns>
+        </member>
+        <member name="M:LittleForker.CooperativeShutdown.SignalExit(System.Int32)">
+            <summary>
+                Signals to a process to shut down.
+            </summary>
+            <param name="processId">The process ID to signal too.</param>
+            <returns>A task represnting the operation.</returns>
+        </member>
+        <member name="P:LittleForker.IProcessInfo.ExitCode">
+            <summary>
+                The process's exit code.
+            </summary>
+        </member>
+        <member name="P:LittleForker.IProcessInfo.Id">
+            <summary>
+                The process's Id.
+            </summary>
+        </member>
+        <member name="T:LittleForker.ProcessExitedHelper">
+            <summary>
+                Helper that raises event when the process has exited. A wrapper around
+                Process.Exited with some error handling and logging.
+            </summary>
+        </member>
+        <member name="M:LittleForker.ProcessExitedHelper.#ctor(System.Int32,System.Action{LittleForker.ProcessExitedHelper})">
+            <summary>
+                Initializes a new instance of <see cref="T:LittleForker.ProcessExitedHelper"/>
+            </summary>
+            <param name="processId">
+                The process Id of the process to watch for exited.
+            </param>
+            <param name="processExited">
+                A callback that is invoked when process has exited or does not
+                exist with the <see cref="T:LittleForker.ProcessExitedHelper"/> instance as a
+                parameter.
+            </param>
+        </member>
+        <member name="T:LittleForker.ProcessRunType">
+            <summary>
+            Defined how a process is expected to run.
+            </summary>
+        </member>
+        <member name="F:LittleForker.ProcessRunType.SelfTerminating">
+            <summary>
+                Processes that are expected to terminate of their own accord.
+            </summary>
+        </member>
+        <member name="F:LittleForker.ProcessRunType.NonTerminating">
+            <summary>
+                Processes that are not expected to terminiate of their own
+                accord and that must be co-operatively shutdown or killed.
+            </summary>
+        </member>
+        <member name="T:LittleForker.ProcessSupervisor">
+            <summary>
+                Launches an process and tracks it's lifecycle .
+            </summary>
+        </member>
+        <member name="T:LittleForker.ProcessSupervisor.State">
+            <summary>
+                The state a process is in.
+            </summary>
+        </member>
+        <member name="M:LittleForker.ProcessSupervisor.#ctor(LittleForker.ProcessRunType,System.String,System.String,System.String,System.Collections.Specialized.StringDictionary,System.Boolean)">
+            <summary>
+                Initializes a new instance of <see cref="T:LittleForker.ProcessSupervisor"/>
+            </summary>
+            <param name="workingDirectory">
+                The working directory to start the process in.
+            </param>
+            <param name="processPath">
+                The path to the process.
+            </param>
+            <param name="processRunType">
+                The process run type.
+            </param>
+            <param name="arguments">
+                Arguments to be passed to the process.
+            </param>
+            <param name="environmentVariables">
+                Environment variables that are set before the process starts.
+            </param>
+        </member>
+        <member name="P:LittleForker.ProcessSupervisor.OnStartException">
+            <summary>
+                Contains the caught exception in the event a process failed to
+                be launched.
+            </summary>
+        </member>
+        <member name="P:LittleForker.ProcessSupervisor.ProcessInfo">
+            <summary>
+                Information about the launched process.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.OutputDataReceived">
+            <summary>
+                Raised when the process emits console data.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.ErrorDataReceived">
+            <summary>
+                Raised when the process emits stderr console data.
+            </summary>
+        </member>
+        <member name="E:LittleForker.ProcessSupervisor.StateChanged">
+            <summary>
+                Raised when the process state has changed.
+            </summary>
+        </member>
+        <member name="M:LittleForker.ProcessSupervisor.Start">
+            <summary>
+                Starts the process.
+            </summary>
+        </member>
+        <member name="M:LittleForker.ProcessSupervisor.Stop(System.Nullable{System.TimeSpan})">
+            <summary>
+                Initiates a process stop. If a timeout is supplied (and greater
+                than 0ms), it will attempt a "co-operative" shutdown by
+                signalling an EXIT command to the process. The process needs to
+                support such signalling and needs to complete within the timeout
+                otherwise the process will be terminated via Kill(). The maximum
+                recommended timeout is 25 seconds. This is 5 seconds less than
+                default 30 seconds that windows will consider a service to be
+                'hung'.
+            </summary>
+            <param name="timeout"></param>
+            <returns></returns>
+        </member>
+        <member name="T:LittleForker.Logging.ILog">
+            <summary>
+                Simple interface that represent a logger.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.ILog.Log(LittleForker.Logging.LogLevel,System.Func{System.String},System.Exception,System.Object[])">
+            <summary>
+                Log a message the specified log level.
+            </summary>
+            <param name="logLevel">The log level.</param>
+            <param name="messageFunc">The message function.</param>
+            <param name="exception">An optional exception.</param>
+            <param name="formatParameters">Optional format parameters for the message generated by the messagefunc. </param>
+            <returns>true if the message was logged. Otherwise false.</returns>
+            <remarks>
+                Note to implementers: the message func should not be called if the loglevel is not enabled
+                so as not to incur performance penalties.
+                To check IsEnabled call Log with only LogLevel and check the return value, no event will be written.
+            </remarks>
+        </member>
+        <member name="T:LittleForker.Logging.ILogProvider">
+            <summary>
+            Represents a way to get a <see cref="T:LittleForker.Logging.Logger"/>
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.ILogProvider.GetLogger(System.String)">
+            <summary>
+            Gets the specified named logger.
+            </summary>
+            <param name="name">Name of the logger.</param>
+            <returns>The logger reference.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.ILogProvider.OpenNestedContext(System.String)">
+            <summary>
+            Opens a nested diagnostics context. Not supported in EntLib logging.
+            </summary>
+            <param name="message">The message to add to the diagnostics context.</param>
+            <returns>A disposable that when disposed removes the message from the context.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.ILogProvider.OpenMappedContext(System.String,System.Object,System.Boolean)">
+            <summary>
+            Opens a mapped diagnostics context. Not supported in EntLib logging.
+            </summary>
+            <param name="key">A key.</param>
+            <param name="value">A value.</param>
+            <param name="destructure">Determines whether to call the destructor or not.</param>
+            <returns>A disposable that when disposed removes the map from the context.</returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogExtensions">
+            <summary>
+                Extension methods for the <see cref="T:LittleForker.Logging.ILog"/> interface.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsDebugEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsErrorEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsFatalEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsInfoEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsTraceEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.IsWarnEnabled(LittleForker.Logging.ILog)">
+            <summary>
+                Check if the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level is enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to check with.</param>
+            <returns>True if the log level is enabled; false otherwise.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Debug(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Debug(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Debug(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Debug(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.DebugFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.DebugException(LittleForker.Logging.ILog,System.String,System.Exception)">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.DebugException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Debug"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Error(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Error(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Error(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Error(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.ErrorFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.ErrorException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Error"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Fatal(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Fatal(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Fatal(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Fatal(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.FatalFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.FatalException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Fatal"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Info(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Info(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Info(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Info(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.InfoFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.InfoException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Info"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Trace(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Trace(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Trace(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Trace(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.TraceFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.TraceException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Trace"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Warn(LittleForker.Logging.ILog,System.Func{System.String})">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="messageFunc">The message function.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Warn(LittleForker.Logging.ILog,System.String)">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Warn(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.Warn(LittleForker.Logging.ILog,System.Exception,System.String,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="exception">The exception.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.WarnFormat(LittleForker.Logging.ILog,System.String,System.Object[])">
+            <summary>
+                Logs a message at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogExtensions.WarnException(LittleForker.Logging.ILog,System.String,System.Exception,System.Object[])">
+            <summary>
+                Logs an exception at the <see cref="F:LittleForker.Logging.LogLevel.Warn"/> log level, if enabled.
+            </summary>
+            <param name="logger">The <see cref="T:LittleForker.Logging.ILog"/> to use.</param>
+            <param name="message">The message.</param>
+            <param name="exception">The exception.</param>
+            <param name="args">Optional format parameters for the message.</param>
+        </member>
+        <member name="T:LittleForker.Logging.LogLevel">
+            <summary>
+                The log level.
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Trace">
+            <summary>
+            Trace
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Debug">
+            <summary>
+            Debug
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Info">
+            <summary>
+            Info
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Warn">
+            <summary>
+            Warn
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Error">
+            <summary>
+            Error
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogLevel.Fatal">
+            <summary>
+            Fatal
+            </summary>
+        </member>
+        <member name="T:LittleForker.Logging.LogProvider">
+            <summary>
+            Provides a mechanism to set the <see cref="T:LittleForker.Logging.ILogProvider" />.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.SetCurrentLogProvider(LittleForker.Logging.ILogProvider)">
+            <summary>
+            Sets the current log provider.
+            </summary>
+            <param name="logProvider">The log provider.</param>
+        </member>
+        <member name="P:LittleForker.Logging.LogProvider.IsDisabled">
+            <summary>
+            Gets or sets a value indicating whether this is logging is disabled.
+            </summary>
+            <value>
+            <c>true</c> if logging is disabled; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="P:LittleForker.Logging.LogProvider.OnCurrentLogProviderSet">
+            <summary>
+            Sets an action that is invoked when a consumer of your library has called SetCurrentLogProvider. It is 
+            important that hook into this if you are using child libraries (especially ilmerged ones) that are using
+            LibLog (or other logging abstraction) so you adapt and delegate to them.
+            <see cref="M:LittleForker.Logging.LogProvider.SetCurrentLogProvider(LittleForker.Logging.ILogProvider)"/> 
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.For``1">
+            <summary>
+            Gets a logger for the specified type.
+            </summary>
+            <typeparam name="T">The type whose name will be used for the logger.</typeparam>
+            <returns>An instance of <see cref="T:LittleForker.Logging.ILog"/></returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.GetCurrentClassLogger">
+            <summary>
+            Gets a logger for the current class.
+            </summary>
+            <returns>An instance of <see cref="T:LittleForker.Logging.ILog"/></returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.GetLogger(System.Type,System.String)">
+            <summary>
+            Gets a logger for the specified type.
+            </summary>
+            <param name="type">The type whose name will be used for the logger.</param>
+            <param name="fallbackTypeName">If the type is null then this name will be used as the log name instead</param>
+            <returns>An instance of <see cref="T:LittleForker.Logging.ILog"/></returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.GetLogger(System.String)">
+            <summary>
+            Gets a logger with the specified name.
+            </summary>
+            <param name="name">The name.</param>
+            <returns>An instance of <see cref="T:LittleForker.Logging.ILog"/></returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.OpenNestedContext(System.String)">
+            <summary>
+            Opens a nested diagnostics context.
+            </summary>
+            <param name="message">A message.</param>
+            <returns>An <see cref="T:System.IDisposable"/> that closes context when disposed.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProvider.OpenMappedContext(System.String,System.Object,System.Boolean)">
+            <summary>
+            Opens a mapped diagnostics context.
+            </summary>
+            <param name="key">A key.</param>
+            <param name="value">A value.</param>
+            <param name="destructure">A optional paramater to indicate message should be destructured.</param>
+            <returns>An <see cref="T:System.IDisposable"/> that closes context when disposed.</returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogProviders.LibLogException">
+            <summary>
+            Exception thrown by LibLog.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LibLogException.#ctor(System.String)">
+            <summary>
+            Initializes a new LibLogException with the specified message.
+            </summary>
+            <param name="message">The message</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LibLogException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new LibLogException with the specified message and inner exception.
+            </summary>
+            <param name="message">The message.</param>
+            <param name="inner">The inner exception.</param>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogMessageFormatter.SimulateStructuredLogging(System.Func{System.String},System.Object[])">
+            <summary>
+                Some logging frameworks support structured logging, such as serilog. This will allow you to add names to structured
+                data in a format string:
+                For example: Log("Log message to {user}", user). This only works with serilog, but as the user of LibLog, you don't
+                know if serilog is actually
+                used. So, this class simulates that. it will replace any text in {curly braces} with an index number.
+                "Log {message} to {user}" would turn into => "Log {0} to {1}". Then the format parameters are handled using regular
+                .net string.Format.
+            </summary>
+            <param name="messageBuilder">The message builder.</param>
+            <param name="formatParameters">The format parameters.</param>
+            <returns></returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogProviders.LogProviderBase">
+            <summary>
+                Base class for specific log providers.
+            </summary>
+        </member>
+        <member name="F:LittleForker.Logging.LogProviders.LogProviderBase.ErrorInitializingProvider">
+            <summary>
+                Error message should initializing the log provider fail.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.#ctor">
+            <summary>
+                Initialize an instance of the <see cref="T:LittleForker.Logging.LogProviders.LogProviderBase"/> class by initializing the references
+                to the nested and mapped diagnostics context-obtaining functions.
+            </summary>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.GetLogger(System.String)">
+            <summary>
+            Gets the specified named logger.
+            </summary>
+            <param name="name">Name of the logger.</param>
+            <returns>The logger reference.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.OpenNestedContext(System.String)">
+            <summary>
+            Opens a nested diagnostics context. Not supported in EntLib logging.
+            </summary>
+            <param name="message">The message to add to the diagnostics context.</param>
+            <returns>A disposable that when disposed removes the message from the context.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.OpenMappedContext(System.String,System.Object,System.Boolean)">
+            <summary>
+            Opens a mapped diagnostics context. Not supported in EntLib logging.
+            </summary>
+            <param name="key">A key.</param>
+            <param name="value">A value.</param>
+            <param name="destructure">Determines whether to call the destructor or not.</param>
+            <returns>A disposable that when disposed removes the map from the context.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.GetOpenNdcMethod">
+            <summary>
+                Returns the provider-specific method to open a nested diagnostics context.
+            </summary>
+            <returns>A provider-specific method to open a nested diagnostics context.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.GetOpenMdcMethod">
+            <summary>
+                Returns the provider-specific method to open a mapped diagnostics context.
+            </summary>
+            <returns>A provider-specific method to open a mapped diagnostics context.</returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogProviders.LogProviderBase.OpenNdc">
+            <summary>
+                Delegate defining the signature of the method opening a nested diagnostics context.
+            </summary>
+            <param name="message">The message to add to the diagnostics context.</param>
+            <returns>A disposable that when disposed removes the message from the context.</returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogProviders.LogProviderBase.OpenMdc">
+            <summary>
+                Delegate defining the signature of the method opening a mapped diagnostics context.
+            </summary>
+            <param name="key">A key.</param>
+            <param name="value">A value.</param>
+            <param name="destructure">Determines whether to call the destructor or not.</param>
+            <returns>A disposable that when disposed removes the map from the context.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.FindType(System.String,System.String)">
+            <summary>
+                Finds a type using a type name and assembly name.
+            </summary>
+            <param name="typeName">The name of the type.</param>
+            <param name="assemblyName">The name of the assembly.</param>
+            <returns>The requested type or null if it was not found.</returns>
+        </member>
+        <member name="M:LittleForker.Logging.LogProviders.LogProviderBase.FindType(System.String,System.Collections.Generic.IReadOnlyList{System.String})">
+            <summary>
+                Finds a type using a type name and a list of assembly names to search.
+            </summary>
+            <param name="typeName">The name of the type.</param>
+            <param name="assemblyNames">A list of assembly names to search.</param>
+            <returns>The request type or null if it was not found.</returns>
+        </member>
+        <member name="T:LittleForker.Logging.LogProviders.LoupeLogProvider.WriteDelegate">
+            <summary>
+                The form of the Loupe Log.Write method we're using
+            </summary>
+        </member>
+        <member name="P:LittleForker.Logging.LogProviders.LoupeLogProvider.ProviderIsAvailableOverride">
+            <summary>
+                Gets or sets a value indicating whether [provider is available override]. Used in tests.
+            </summary>
+            <value>
+                <c>true</c> if [provider is available override]; otherwise, <c>false</c>.
+            </value>
+        </member>
+        <member name="T:LittleForker.Logging.Logger">
+            <summary>
+            Logger delegate.
+            </summary>
+            <param name="logLevel">The log level</param>
+            <param name="messageFunc">The message function</param>
+            <param name="exception">The exception</param>
+            <param name="formatParameters">The format parameters</param>
+            <returns>A boolean.</returns>
+        </member>
+    </members>
+</doc>

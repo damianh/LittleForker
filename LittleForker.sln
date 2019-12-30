@@ -2,17 +2,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2006
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker", "LittleForker\LittleForker.csproj", "{F68CAE00-43E0-4B81-87A3-AE70F24D3284}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker", "src\LittleForker\LittleForker.csproj", "{F68CAE00-43E0-4B81-87A3-AE70F24D3284}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker.Tests", "LittleForker.Tests\LittleForker.Tests.csproj", "{7091F216-A22D-45A9-972F-F45EEFA6CE84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker.Tests", "src\LittleForker.Tests\LittleForker.Tests.csproj", "{7091F216-A22D-45A9-972F-F45EEFA6CE84}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1D5AE681-2936-4343-958F-BBC3AB66C7A8} = {1D5AE681-2936-4343-958F-BBC3AB66C7A8}
 		{F9DB64DD-3FAA-4949-9606-E52995646888} = {F9DB64DD-3FAA-4949-9606-E52995646888}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NonTerminatingProcess", "NonTerminatingProcess\NonTerminatingProcess.csproj", "{1D5AE681-2936-4343-958F-BBC3AB66C7A8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NonTerminatingProcess", "src\NonTerminatingProcess\NonTerminatingProcess.csproj", "{1D5AE681-2936-4343-958F-BBC3AB66C7A8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SelfTerminatingProcess", "SelfTerminatingProcess\SelfTerminatingProcess.csproj", "{F9DB64DD-3FAA-4949-9606-E52995646888}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SelfTerminatingProcess", "src\SelfTerminatingProcess\SelfTerminatingProcess.csproj", "{F9DB64DD-3FAA-4949-9606-E52995646888}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

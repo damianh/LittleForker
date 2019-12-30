@@ -11,7 +11,7 @@ namespace build
         private const string ArtifactsDir = "artifacts";
         private const string Clean = "clean";
         private const string Build = "build";
-        private const string RunTests = "run-tests";
+        private const string Test = "test";
         private const string Pack = "pack";
         private const string Publish = "publish";
 
@@ -40,19 +40,19 @@ namespace build
                 }
             });
 
-            Target(Build, () => Run("dotnet", "build src/LittleForker.sln -c Release"));
+            Target(Build, () => Run("dotnet", "build LittleForker.sln -c Release"));
 
             Target(
-                RunTests,
+                Test,
                 DependsOn(Build),
                 ForEach("LittleForker.Tests"),
-                project => Run("dotnet", $"test src/{project}/{project}.csproj -c Release -r {ArtifactsDir} --no-build -l trx;LogFileName={project}.xml --verbosity=normal"));
+                project => Run("dotnet", $"test src/{project}/{project}.csproj -c Release -r ../../{ArtifactsDir} --no-build -l trx;LogFileName={project}.xml --verbosity=normal"));
 
             Target(
                 Pack,
                 DependsOn(Build),
                 ForEach("LittleForker"),
-                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o {ArtifactsDir} --no-build"));
+                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o ../../{ArtifactsDir} --no-build"));
 
             Target(Publish, DependsOn(Pack), () =>
             {
@@ -66,14 +66,19 @@ namespace build
                     Console.WriteLine("Feedz API key not available. Packages will not be pushed.");
                     return;
                 }
-
+                Console.WriteLine("Feedz API Key availabile. Pushing packages to Feedz...");
                 foreach (var packageToPush in packagesToPush)
                 {
-                    Run("dotnet", $"nuget push {packageToPush} -s https://f.feedz.io/dh/oss-ci/nuget/index.json  -k {apiKey}");
+                    // NOTE: the try catch can be removed when https://github.com/NuGet/Home/issues/1630 is released.
+                    try
+                    {
+                        Run("dotnet", $"nuget push {packageToPush} -s https://f.feedz.io/dh/oss-ci/nuget/index.json -k {apiKey}", noEcho: true);
+                    }
+                    catch (SimpleExec.NonZeroExitCodeException) { } //can get 1 if try to push package that differs only in build metadata
                 }
             });
 
-            Target("default", DependsOn(Clean, RunTests, Publish));
+            Target("default", DependsOn(Clean, Test, Publish));
 
             RunTargetsAndExit(args);
         }

@@ -21,10 +21,10 @@ CI packages on feedz.io: https://f.feedz.io/dh/oss-ci/nuget/index.json
 ## Installation
 
 ```bash
-dotnet add package LittleForker 
+dotnet add package LittleForker
 ```
 
-CI packages are on personal feed: https://www.myget.org/F/dh/api/v3/index.json 
+CI packages are on personal feed: https://www.myget.org/F/dh/api/v3/index.json
 
 ## Using
 
@@ -35,12 +35,12 @@ so that it exits itself when the parent exists. It's also safe guard in
 co-operative shut down if the parent failed to signal correctly (i.e. it
 crashed).
 
-It wraps `Process.Exited` with some additional behavior:
+It wraps `Process.Exited` with some additional behaviour:
 
- - Raises the event if the process is not found.
- - Raises the event if the process has already exited which would otherwise
-   result in an `InvalidOperationException`
- - Logging.
+- Raises the event if the process is not found.
+- Raises the event if the process has already exited which would otherwise
+  result in an `InvalidOperationException`
+- Logging.
 
 This is something simple to implement in your own code so you may
 consider copying it if you don't want a dependency on `LittleForker`.
@@ -48,7 +48,7 @@ consider copying it if you don't want a dependency on `LittleForker`.
 Typically you will tell a process to monitor another process by passing in the
 other process's Id as a command line argument. Something like:
 
-```
+```bash
 .\MyApp --ParentProcessID=12345
 ```
 
@@ -70,32 +70,32 @@ using(new ProcessExitedHelper(parentPid, exitedHelper => Environment.Exit(0)))
 `Environment.Exit(0)` is quite an abrupt way to shut town; you may want to
 handle things more gracefully such as flush data, cancel requests in flight etc.
 For an example, see
-[NotTerminiatingProcess](src/NonTerminatingProcess/Program.cs) `Run()` that uses
+[NotTerminatingProcess](src/NonTerminatingProcess/Program.cs) `Run()` that uses
 a `CancellationTokenSource`.
 
 ### 2. ProcessSupervisor
 
 Process supervisor launches a process and tracks it's lifecycle that is represented by a
-statemachine. Typically use case is a "parent" processes launching one or more "child"
+state machine. Typically use case is a "parent" processes launching one or more "child"
 processes.
 
 There are two types of processes that are supported:
 
 1. **Self-Terminating** where the process will exit of it's own accord.
 2. **Non-Terminating** is a process that never shut down unless it is
-   signaled to do so (if it participates in co-operative shutdown) _or_ is killed.
+   signalled to do so (if it participates in co-operative shutdown) _or_ is killed.
 
 A process's state is represented by `ProcessSupervisor.State` enum:
 
- - NotStarted,
- - Running,
- - StartFailed,
- - Stopping,
- - ExitedSuccessfully,
- - ExitedWithError,
- - ExitedUnexpectedly
+- NotStarted,
+- Running,
+- StartFailed,
+- Stopping,
+- ExitedSuccessfully,
+- ExitedWithError,
+- ExitedUnexpectedly
 
-... with the transitions between them desribed with this state machine depending
+... with the transitions between them described with this state machine depending
 whether self-terminating or non-terminating:
 
 ![statemachine](state-machine.png)
@@ -122,7 +122,7 @@ supervisor.Start();
 // attempts a co-operative shutdown with a default timeout of 3 
 // seconds otherwise kills the process
 
-supervisor.Stop(); 
+supervisor.Stop();
 ```
 
 With an async extension, it is possible to await a supervisor state:
@@ -152,7 +152,7 @@ if(result == startFailed)
 
 Cooperative shutdown allows a "parent" process to instruct a "child" process to
 shut down. Different to `SIGTERM` and `Process.Kill()` in that it allows a child
-to acknowledge recipt of the request and clean up cleanly. Combined with 
+to acknowledge receipt of the request and clean up cleanly. Combined with 
 `Supervisor.Stop()` a parent can send the signal and then wait for `ExitedSuccessfully`.
 
 The inter-process communication is done via named pipes where the pipe name is
@@ -178,7 +178,7 @@ For a "parent" process to be able to signal:
 await CooperativeShutdown.SignalExit(childProcessId);
 ```
 
-This is used in `ProcessSupervisor` so if your parent process is using that, then you 
+This is used in `ProcessSupervisor` so if your parent process is using that, then you
 typically won't be using this explicitly.
 
 ## Building
@@ -188,6 +188,6 @@ typically won't be using this explicitly.
 
 ## Credits & Feedback
 
-[@randompunter](https://twitter.com/randompunter) for feedback / criticism. 
+[@randompunter](https://twitter.com/randompunter) for feedback / criticism.
 
 Hat tip to [@markrendle](https://twitter.com/markrendle) for the project name.

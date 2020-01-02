@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using static Bullseye.Targets;
 using static SimpleExec.Command;
 
@@ -22,14 +23,20 @@ namespace build
                 {
                     return;
                 }
-                var di = new DirectoryInfo(ArtifactsDir);
-                foreach (var file in di.GetFiles())
+                var filesToDelete = Directory
+                    .GetFiles(ArtifactsDir, "*.*", SearchOption.AllDirectories)
+                    .Where(f => !f.EndsWith(".gitignore"));
+                foreach (var file in filesToDelete)
                 {
-                    file.Delete(); 
+                    Console.WriteLine($"Deleting file {file}");
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
                 }
-                foreach (var dir in di.GetDirectories())
+                var directoriesToDelete = Directory.GetDirectories("artifacts");
+                foreach (var directory in directoriesToDelete)
                 {
-                    dir.Delete(true); 
+                    Console.WriteLine($"Deleting directory {directory}");
+                    Directory.Delete(directory, true);
                 }
             });
 

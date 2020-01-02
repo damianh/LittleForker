@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>Damian Hickey</Authors>
     <PackageProjectUrl>https://github.com/damianh/LittleForker</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/damianh/LittleForker/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>child-process;process-manager;process-supervision</PackageTags>
     <NoWarn>1701;1702;1705;1591</NoWarn>

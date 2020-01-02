@@ -46,13 +46,13 @@ namespace build
                 RunTests,
                 DependsOn(Build),
                 ForEach("LittleForker.Tests"),
-                project => Run("dotnet", $"test src/{project}/{project}.csproj -c Release -r ../../{ArtifactsDir} --no-build -l trx;LogFileName={project}.xml --verbosity=normal"));
+                project => Run("dotnet", $"test src/{project}/{project}.csproj -c Release -r {ArtifactsDir} --no-build -l trx;LogFileName={project}.xml --verbosity=normal"));
 
             Target(
                 Pack,
                 DependsOn(Build),
                 ForEach("LittleForker"),
-                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o ../../{ArtifactsDir} --no-build"));
+                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o {ArtifactsDir} --no-build"));
 
             Target(Publish, DependsOn(Pack), () =>
             {

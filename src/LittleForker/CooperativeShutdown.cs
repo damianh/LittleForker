@@ -4,18 +4,16 @@ using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace LittleForker
 {
     /// <summary>
-    ///     Allows a process to be co-operatively shut down (as opposed the more
+    ///     Allows a process to be co-cooperatively shut down (as opposed the more
     ///     brutal Process.Kill()
     /// </summary>
     public static class CooperativeShutdown
     {
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
-
         /// <summary>
         ///     The pipe name a process will listen on for a EXIT signal.
         /// </summary>
@@ -30,15 +28,19 @@ namespace LittleForker
         ///     The callback that is invoked when cooperative shutdown has been
         ///     requested.
         /// </param>
+        /// <param name="loggerFactory">
+        ///     A logger factory.
+        /// </param>
         /// <param name="onError">A method to be called if an error occurs while listening</param>
         /// <returns>
         ///     A disposable representing the named pipe listener.
         /// </returns>
-        public static Task<IDisposable> Listen(Action shutdownRequested, Action<Exception> onError = default)
+        public static Task<IDisposable> Listen(Action shutdownRequested, ILoggerFactory loggerFactory, Action<Exception> onError = default)
         {
             var listener = new CooperativeShutdownListener(
                 GetPipeName(Process.GetCurrentProcess().Id),
-                shutdownRequested);
+                shutdownRequested,
+                loggerFactory.CreateLogger($"{typeof(CooperativeShutdown).Name}"));
             
             Task.Run(async () =>
             {
@@ -59,10 +61,12 @@ namespace LittleForker
         ///     Signals to a process to shut down.
         /// </summary>
         /// <param name="processId">The process ID to signal too.</param>
-        /// <returns>A task represnting the operation.</returns>
+        /// <param name="loggerFactory">A logger factory.</param>
+        /// <returns>A task representing the operation.</returns>
         // TODO Should exceptions rethrow or should we let the caller that the signalling failed i.e. Task<book>?
-        public static async Task SignalExit(int processId)
+        public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
         {
+            var logger = loggerFactory.CreateLogger($"{typeof(CooperativeShutdown).Name}");
             var pipeName = GetPipeName(processId);
             using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
             {
@@ -71,22 +75,22 @@ namespace LittleForker
                     await pipe.ConnectAsync((int)TimeSpan.FromSeconds(3).TotalMilliseconds);
                     var streamWriter = new StreamWriter(pipe);
                     var streamReader = new StreamReader(pipe, true);
-                    Logger.Info($"Signalling EXIT to client on pipe {pipeName}...");
+                    logger.LogInformation($"Signalling EXIT to client on pipe {pipeName}...");
                     await SignalExit(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3));
-                    Logger.Info($"Signalling EXIT to client on pipe {pipeName} successful.");
+                    logger.LogInformation($"Signalling EXIT to client on pipe {pipeName} successful.");
                 }
                 catch (IOException ex)
                 {
-                    Logger.ErrorException($"Failed to signal EXIT to client on pipe {pipeName}.", ex);
+                    logger.LogError(ex, $"Failed to signal EXIT to client on pipe {pipeName}.");
                     
                 }
                 catch (TimeoutException ex)
                 {
-                    Logger.ErrorException($"Timeout signalling EXIT on pipe {pipeName}.", ex);
+                    logger.LogError(ex, $"Timeout signalling EXIT on pipe {pipeName}.");
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorException($"Failed to signal EXIT to client on pipe {pipeName}.", ex);
+                    logger.LogError(ex, $"Failed to signal EXIT to client on pipe {pipeName}.");
                 }
             }
         }
@@ -102,14 +106,17 @@ namespace LittleForker
         {
             private readonly string _pipeName;
             private readonly Action _shutdownRequested;
+            private readonly ILogger _logger;
             private readonly CancellationTokenSource _stopListening;
 
             internal CooperativeShutdownListener(
                 string pipeName,
-                Action shutdownRequested)
+                Action shutdownRequested,
+                ILogger logger)
             {
                 _pipeName = pipeName;
                 _shutdownRequested = shutdownRequested;
+                _logger = logger;
                 _stopListening = new CancellationTokenSource();
             }
 
@@ -124,10 +131,10 @@ namespace LittleForker
                         PipeTransmissionMode.Byte,
                         PipeOptions.None);
 
-                    Logger.Info($"Listening on pipe '{_pipeName}'.");
+                    _logger.LogInformation($"Listening on pipe '{_pipeName}'.");
 
                     await pipe.WaitForConnectionAsync(_stopListening.Token);
-                    Logger.Info($"Client connected to pipe '{_pipeName}'.");
+                    _logger.LogInformation($"Client connected to pipe '{_pipeName}'.");
 
                     try
                     {
@@ -140,7 +147,7 @@ namespace LittleForker
                                     // a pipe can get disconnected after OS pipes enumeration as well
                                     if (!pipe.IsConnected)
                                     {
-                                        Logger.Debug($"Pipe {_pipeName} connection is broken re-connecting");
+                                        _logger.LogDebug($"Pipe {_pipeName} connection is broken re-connecting");
                                         break;
                                     }
 
@@ -151,12 +158,12 @@ namespace LittleForker
                                         continue;
                                     }
 
-                                    Logger.Info($"Received command from server: {s}");
+                                    _logger.LogInformation($"Received command from server: {s}");
 
                                     await writer.WriteLineAsync("OK");
-                                    Logger.Info("Responded with OK");
+                                    _logger.LogInformation("Responded with OK");
 
-                                    Logger.Info("Raising exit request...");
+                                    _logger.LogInformation("Raising exit request...");
                                     _shutdownRequested();
 
                                     return;
@@ -167,7 +174,7 @@ namespace LittleForker
                     catch (IOException ex)
                     {
                         // As the pipe connection should be restored this exception should not be considered as terminating
-                        Logger.Debug(ex, "Pipe connection failed");
+                        _logger.LogDebug(ex, "Pipe connection failed");
                     }
                 }
             }

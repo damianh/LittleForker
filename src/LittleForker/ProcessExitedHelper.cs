@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace LittleForker
 {
@@ -12,7 +12,6 @@ namespace LittleForker
     /// </summary>
     public sealed class ProcessExitedHelper : IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetCurrentClassLogger();
         private int _processExitedRaised;
         private readonly Process _process;
 
@@ -27,25 +26,31 @@ namespace LittleForker
         ///     exist with the <see cref="ProcessExitedHelper"/> instance as a
         ///     parameter.
         /// </param>
+        /// <param name="loggerFactory">
+        ///     A logger.
+        /// </param>
         public ProcessExitedHelper(
             int processId,
-            Action<ProcessExitedHelper> processExited)
+            Action<ProcessExitedHelper> processExited,
+            ILoggerFactory loggerFactory)
         {
             ProcessId = processId;
+            var logger = loggerFactory.CreateLogger<ProcessExitedHelper>();
+
             _process = Process.GetProcesses().SingleOrDefault(pr => pr.Id == processId);
             if (_process == null)
             {
-                Logger.Error($"Process with Id {processId} was not found.");
+                logger.LogError($"Process with Id {processId} was not found.");
                 OnProcessExit();
                 return;
             }
-            Logger.Info($"Process with Id {processId} found.");
+            logger.LogInformation($"Process with Id {processId} found.");
             try
             {
                 _process.EnableRaisingEvents = true;
                 _process.Exited += (_, __) =>
                 {
-                    Logger.Info($"Parent process with Id {processId} exited.");
+                    logger.LogInformation($"Parent process with Id {processId} exited.");
                     OnProcessExit();
                 };
             }
@@ -53,13 +58,13 @@ namespace LittleForker
             // attaching to the Exited event
             catch (InvalidOperationException ex) 
             {
-                Logger.ErrorException($"Process with Id {processId} has already exited.", ex);
+                logger.LogInformation($"Process with Id {processId} has already exited.", ex);
                 OnProcessExit();
             }
 
             if (_process.HasExited)
             {
-                Logger.Error($"Process with Id {processId} has already exited.");
+                logger.LogInformation($"Process with Id {processId} has already exited.");
                 OnProcessExit();
             }
 
@@ -67,7 +72,7 @@ namespace LittleForker
             {
                 if (Interlocked.CompareExchange(ref _processExitedRaised, 1, 0) == 0) // Ensure raised once
                 {
-                    Logger.Info("Raising process exited.");
+                    logger.LogInformation("Raising process exited.");
                     processExited(this);
                 }
             }

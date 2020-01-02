@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using LittleForker.Infra;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace LittleForker
 {
-    public class CooperativeShutdownTests : IDisposable
+    public class CooperativeShutdownTests
     {
-        private readonly IDisposable _logCapture;
+        private readonly ILoggerFactory _loggerFactory;
 
         public CooperativeShutdownTests(ITestOutputHelper outputHelper)
         {
-            _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
+            _loggerFactory = new XunitLoggerFactory(outputHelper).LoggerFactory;
         }
 
         [Fact]
@@ -23,18 +22,14 @@ namespace LittleForker
         {
             var exitCalled = new TaskCompletionSource<bool>();
             var listener = await CooperativeShutdown.Listen(
-                () => exitCalled.SetResult(true));
+                () => exitCalled.SetResult(true),
+                _loggerFactory);
 
-            await CooperativeShutdown.SignalExit(Process.GetCurrentProcess().Id);
+            await CooperativeShutdown.SignalExit(Process.GetCurrentProcess().Id, _loggerFactory);
 
             (await exitCalled.Task).ShouldBeTrue();
 
             listener.Dispose();
-        }
-
-        public void Dispose()
-        {
-            _logCapture.Dispose();
         }
     }
 }

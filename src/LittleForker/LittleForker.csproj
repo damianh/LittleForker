@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>full</DebugType>
     <Authors>Damian Hickey</Authors>
+    <LangVersion>7.2</LangVersion>
     <PackageProjectUrl>https://github.com/damianh/LittleForker</PackageProjectUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>process-supervision, child-process</PackageTags>
@@ -14,12 +15,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibLog" Version="5.0.8">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
-    <PackageReference Include="MinVer" Version="2.1.0">
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.0" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="MinVer" Version="2.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>

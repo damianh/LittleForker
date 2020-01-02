@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Threading.Tasks;
-using LittleForker.Infra;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,18 +11,18 @@ namespace LittleForker
     public class ProcessSupervisorTests : IDisposable
     {
         private readonly ITestOutputHelper _outputHelper;
-        private readonly IDisposable _logCapture;
+        private readonly ILoggerFactory _loggerFactory;
 
         public ProcessSupervisorTests(ITestOutputHelper outputHelper)
         {
             _outputHelper = outputHelper;
-            _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
+            _loggerFactory = new XunitLoggerFactory(outputHelper).LoggerFactory;
         }
 
         [Fact]
         public async Task Given_invalid_process_path_then_state_should_be_StartError()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, "c:/", "invalid.exe");
+            var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");
             var stateIsStartFailed = supervisor.WhenStateIs(ProcessSupervisor.State.StartFailed);
             supervisor.Start();
 
@@ -37,7 +36,7 @@ namespace LittleForker
         [Fact]
         public void Given_invalid_working_directory_then_state_should_be_StartError()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, "c:/does_not_exist", "git.exe");
+            var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/does_not_exist", "git.exe");
             supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
@@ -51,6 +50,7 @@ namespace LittleForker
         {
             var envVars = new StringDictionary {{"a", "b"}};
             var supervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.SelfTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -74,6 +74,7 @@ namespace LittleForker
         public async Task Given_long_running_exe_then_should_exit_when_stopped()
         {
             var supervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.NonTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -96,6 +97,7 @@ namespace LittleForker
         public async Task Can_restart_a_stopped_short_running_process()
         {
             var supervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.SelfTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -112,7 +114,12 @@ namespace LittleForker
         [Fact]
         public async Task Can_restart_a_stopped_long_running_process()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./NonTerminatingProcess/NonTerminatingProcess.dll");
+            var supervisor = new ProcessSupervisor(
+                _loggerFactory,
+                ProcessRunType.NonTerminating,
+                Environment.CurrentDirectory,
+                "dotnet",
+                "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.Start();
@@ -129,7 +136,12 @@ namespace LittleForker
         [Fact]
         public async Task When_stop_a_non_terminating_process_then_should_exit_successfully()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet", "./NonTerminatingProcess/NonTerminatingProcess.dll");
+            var supervisor = new ProcessSupervisor(
+                _loggerFactory,
+                ProcessRunType.NonTerminating,
+                Environment.CurrentDirectory,
+                "dotnet",
+                "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.Start();
@@ -142,7 +154,11 @@ namespace LittleForker
         [Fact]
         public void Can_attempt_to_restart_a_failed_short_running_process()
         {
-            var supervisor = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "invalid.exe");
+            var supervisor = new ProcessSupervisor(
+                _loggerFactory,
+                ProcessRunType.NonTerminating,
+                Environment.CurrentDirectory,
+                "invalid.exe");
             supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
@@ -157,13 +173,16 @@ namespace LittleForker
         [Fact]
         public void WriteDotGraph()
         {
-            var processController = new ProcessSupervisor(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "invalid.exe");
+            var processController = new ProcessSupervisor(
+                _loggerFactory, 
+                ProcessRunType.NonTerminating, 
+                Environment.CurrentDirectory,
+                "invalid.exe");
             _outputHelper.WriteLine(processController.GetDotGraph());
         }
 
         public void Dispose()
         {
-            _logCapture?.Dispose();
         }
     }
 }

@@ -4,6 +4,8 @@ A utility to aid in the launching and supervision of processes. The original use
 case is installing a single service who then spawns other processes as part of a
 multi-process application.
 
+CI packages on feedz.io: https://f.feedz.io/dh/oss-ci/nuget/index.json
+
 ## Features
 
   1. **ProcessExitedHelper**: a helper around `Process.Exited` with some additional

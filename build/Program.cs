@@ -59,23 +59,23 @@ namespace build
                 var packagesToPush = Directory.GetFiles(ArtifactsDir, "*.nupkg", SearchOption.TopDirectoryOnly);
                 Console.WriteLine($"Found packages to publish: {string.Join("; ", packagesToPush)}");
 
-                var apiKey = Environment.GetEnvironmentVariable("MYGET_API_KEY");
+                var apiKey = Environment.GetEnvironmentVariable("FEEDZ_LITTLEFORKER_API_KEY");
 
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
-                    Console.WriteLine("MyGet API key not available. Packages will not be pushed.");
+                    Console.WriteLine("Feedz API key not available. Packages will not be pushed.");
                     return;
                 }
 
                 foreach (var packageToPush in packagesToPush)
                 {
-                    Run("dotnet", $"nuget push {packageToPush} -s https://www.myget.org/F/dh/api/v3/index.json  -k {apiKey}");
+                    Run("dotnet", $"nuget push {packageToPush} -s https://f.feedz.io/dh/oss-ci/nuget/index.json  -k {apiKey}");
                 }
             });
 
             Target("default", DependsOn(Clean, RunTests, Publish));
 
-            RunTargets(args);
+            RunTargetsAndExit(args);
         }
     }
 }

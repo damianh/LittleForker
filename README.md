@@ -181,8 +181,11 @@ typically won't be using this explicitly.
 
 ## Building
 
-- Requires .NET Core 2.1 SDK or later
-- Run `build.cmd` to compile, run tests and build package.
+With docker which is same as CI:
+- Run `build.cmd`/`build.sh` to compile, run tests and build package.
+
+Local build which requres .NET Core SDK 3.1:
+- Run `build-local.cmd`/`build-local.sh` to compile, run tests and build package. 
 
 ## Credits & Feedback
 

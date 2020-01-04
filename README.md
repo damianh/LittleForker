@@ -1,10 +1,8 @@
-# Little Forker [![Build Status](https://travis-ci.org/damianh/LittleForker.svg?branch=master)](https://travis-ci.org/damianh/LittleForker) [![NuGet](https://img.shields.io/nuget/v/LittleForker.svg)](https://www.nuget.org/packages/LittleForker)
+# Little Forker [![Build Status](https://travis-ci.org/damianh/LittleForker.svg?branch=master)](https://travis-ci.org/damianh/LittleForker) [![NuGet](https://img.shields.io/nuget/v/LittleForker.svg)](https://www.nuget.org/packages/LittleForker) [![feedz.io](https://img.shields.io/badge/endpoint.svg?url=https%3A%2F%2Ff.feedz.io%2Fdh%2Foss-ci%2Fshield%2FLittleForker%2Flatest)](https://f.feedz.io/dh/oss-ci/packages/LittleForker/latest/download)
 
 A utility to aid in the launching and supervision of processes. The original use
 case is installing a single service who then spawns other processes as part of a
 multi-process application.
-
-CI packages on feedz.io: https://f.feedz.io/dh/oss-ci/nuget/index.json
 
 ## Features
 

@@ -23,7 +23,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Stateless" Version="4.3.0" />
+    <PackageReference Include="Stateless" Version="5.1.1" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 using Stateless;
 using Stateless.Graph;
 
@@ -13,7 +13,7 @@ namespace LittleForker
     /// </summary>
     public class ProcessSupervisor
     {
-        private readonly ILog _logger;
+        private readonly ILogger _logger;
         private readonly string _arguments;
         private readonly StringDictionary _environmentVariables;
         private readonly bool _captureStdErr;
@@ -25,6 +25,7 @@ namespace LittleForker
         private readonly string _workingDirectory;
         private Process _process;
         private readonly object _lockObject = new object();
+        private ILoggerFactory _loggerFactory;
 
         /// <summary>
         ///     The state a process is in.
@@ -60,13 +61,20 @@ namespace LittleForker
         /// <param name="processRunType">
         ///     The process run type.
         /// </param>
+        /// <param name="loggerFactory">
+        ///     A logger factory.
+        /// </param>
         /// <param name="arguments">
         ///     Arguments to be passed to the process.
         /// </param>
         /// <param name="environmentVariables">
         ///     Environment variables that are set before the process starts.
         /// </param>
+        /// <param name="captureStdErr">
+        ///     A flag to indicated whether to capture standard error output.
+        /// </param>
         public ProcessSupervisor(
+            ILoggerFactory loggerFactory,
             ProcessRunType processRunType,
             string workingDirectory,
             string processPath,
@@ -74,13 +82,14 @@ namespace LittleForker
             StringDictionary environmentVariables = null,
             bool captureStdErr = false)
         {
+            _loggerFactory = loggerFactory;
             _workingDirectory = workingDirectory;
             _processPath = processPath;
             _arguments = arguments ?? string.Empty;
             _environmentVariables = environmentVariables;
             _captureStdErr = captureStdErr;
 
-            _logger = LogProvider.GetLogger($"ProcessSupervisor-{processPath}");
+            _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{processPath}");
 
             _processStateMachine
                 .Configure(State.NotStarted)
@@ -133,7 +142,7 @@ namespace LittleForker
 
             _processStateMachine.OnTransitioned(transition =>
             {
-                _logger.Info($"State transition from {transition.Source} to {transition.Destination}");
+                _logger.LogInformation($"State transition from {transition.Source} to {transition.Destination}");
                 StateChanged?.Invoke(transition.Destination);
             });
         }
@@ -164,7 +173,6 @@ namespace LittleForker
         ///     Raised when the process emits console data.
         /// </summary>
         public event Action<string> OutputDataReceived;
-
 
         /// <summary>
         ///     Raised when the process emits stderr console data.
@@ -262,7 +270,7 @@ namespace LittleForker
             }
             catch (Exception ex)
             {
-                _logger.ErrorException("Failed to start process.", ex);
+                _logger.LogError(ex, $"Failed to start process {_processPath}");
                 lock (_lockObject)
                 {
                     _processStateMachine.Fire(_startErrorTrigger, ex);
@@ -283,15 +291,15 @@ namespace LittleForker
             {
                 try
                 {
-                    _logger.Info($"Killing process {_process.Id}");
+                    _logger.LogInformation($"Killing process {_process.Id}");
                     _process.Kill();
                 }
                 catch (Exception ex)
                 {
-                    _logger.WarnException(
+                    _logger.LogWarning(
+                        ex,
                         $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                        "in the a race condition where process has already exited and an attempt to kill it.",
-                        ex);
+                        "in the a race condition where process has already exited and an attempt to kill it.");
                 }
             }
             else
@@ -304,7 +312,7 @@ namespace LittleForker
                     // only means the process has _started_ to shut down.
 
                     // TODO detect if the app hasn't shut down in the allotted time and if so, kill it.
-                    await CooperativeShutdown.SignalExit(ProcessInfo.Id).TimeoutAfter(timeout.Value);
+                    await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
                 }
                 catch (TimeoutException)
                 {
@@ -318,10 +326,10 @@ namespace LittleForker
                     }
                     catch (Exception ex)
                     {
-                        _logger.WarnException(
+                        _logger.LogWarning(
+                            ex,
                             $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                            "in the a race condition where process has already exited and an attempt to kill it.",
-                            ex);
+                            "in the a race condition where process has already exited and an attempt to kill it.");
                     }
                 }
             }

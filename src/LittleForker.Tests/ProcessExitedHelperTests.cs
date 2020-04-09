@@ -1,29 +1,28 @@
 ﻿using System;
 using System.Threading.Tasks;
-using LittleForker.Infra;
-using LittleForker.Logging;
+using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace LittleForker
 {
-    public class ProcessExitedHelperTests : IDisposable
+    public class ProcessExitedHelperTests
     {
         private readonly ITestOutputHelper _outputHelper;
-        private readonly IDisposable _logCapture;
+        private readonly ILoggerFactory _loggerFactory;
 
         public ProcessExitedHelperTests(ITestOutputHelper outputHelper)
         {
             _outputHelper = outputHelper;
-            _logCapture = LogHelper.Capture(outputHelper, LogProvider.SetCurrentLogProvider);
+            _loggerFactory = new XunitLoggerFactory(outputHelper).LoggerFactory;
         }
 
         [Fact]
         public async Task When_parent_process_does_not_exist_then_should_call_parent_exited_callback()
         {
             var parentExited = new TaskCompletionSource<int?>();
-            using (new ProcessExitedHelper(-1, watcher => parentExited.SetResult(watcher.ProcessId)))
+            using (new ProcessExitedHelper(-1, watcher => parentExited.SetResult(watcher.ProcessId), _loggerFactory))
             {
                 var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
                 processId.ShouldBe(-1);
@@ -35,6 +34,7 @@ namespace LittleForker
         {
             // Start parent
             var supervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.NonTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -46,7 +46,7 @@ namespace LittleForker
 
             // Monitor parent
             var parentExited = new TaskCompletionSource<int?>();
-            using (new ProcessExitedHelper(supervisor.ProcessInfo.Id, watcher => parentExited.SetResult(watcher.ProcessId)))
+            using (new ProcessExitedHelper(supervisor.ProcessInfo.Id, watcher => parentExited.SetResult(watcher.ProcessId), _loggerFactory))
             {
                 // Stop parent
                 await supervisor.Stop(TimeSpan.FromSeconds(2));
@@ -60,6 +60,7 @@ namespace LittleForker
         {
             // Start parent
             var parentSupervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.NonTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -71,6 +72,7 @@ namespace LittleForker
 
             // Start child
             var childSupervisor = new ProcessSupervisor(
+                _loggerFactory,
                 ProcessRunType.SelfTerminating,
                 Environment.CurrentDirectory,
                 "dotnet",
@@ -86,11 +88,6 @@ namespace LittleForker
 
             // Wait for child to stop
             await childHasStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
-        }
-
-        public void Dispose()
-        {
-            _logCapture?.Dispose();
         }
     }
 }

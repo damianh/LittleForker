@@ -89,7 +89,7 @@ namespace LittleForker
             _environmentVariables = environmentVariables;
             _captureStdErr = captureStdErr;
 
-            _logger = loggerFactory.CreateLogger($"ProcessSupervisor-{processPath}");
+            _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{processPath}");
 
             _processStateMachine
                 .Configure(State.NotStarted)

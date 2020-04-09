@@ -40,7 +40,7 @@ namespace LittleForker
             var listener = new CooperativeShutdownListener(
                 GetPipeName(Process.GetCurrentProcess().Id),
                 shutdownRequested,
-                loggerFactory.CreateLogger($"{typeof(CooperativeShutdown).Name}"));
+                loggerFactory.CreateLogger($"{nameof(LittleForker)}.{typeof(CooperativeShutdown).Name}"));
             
             Task.Run(async () =>
             {
@@ -66,7 +66,7 @@ namespace LittleForker
         // TODO Should exceptions rethrow or should we let the caller that the signalling failed i.e. Task<book>?
         public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
         {
-            var logger = loggerFactory.CreateLogger($"{typeof(CooperativeShutdown).Name}");
+            var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{typeof(CooperativeShutdown).Name}");
             var pipeName = GetPipeName(processId);
             using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
             {

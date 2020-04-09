@@ -35,7 +35,7 @@ namespace LittleForker
             ILoggerFactory loggerFactory)
         {
             ProcessId = processId;
-            var logger = loggerFactory.CreateLogger<ProcessExitedHelper>();
+            var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessExitedHelper)}");
 
             _process = Process.GetProcesses().SingleOrDefault(pr => pr.Id == processId);
             if (_process == null)

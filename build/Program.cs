@@ -42,17 +42,13 @@ namespace build
 
             Target(Build, () => Run("dotnet", "build LittleForker.sln -c Release"));
 
-            Target(
-                Test,
+            Target(Test,
                 DependsOn(Build),
-                ForEach("LittleForker.Tests"),
-                project => Run("dotnet", $"test src/{project}/{project}.csproj -c Release -r {ArtifactsDir} --no-build -l trx;LogFileName={project}.xml --verbosity=normal"));
+                () => Run("dotnet", $"test src/LittleForker.Tests/LittleForker.Tests.csproj -c Release -r {ArtifactsDir} --no-build -l trx;LogFileName=LittleForker.Tests.xml --verbosity=normal"));
 
-            Target(
-                Pack,
+            Target(Pack,
                 DependsOn(Build),
-                ForEach("LittleForker"),
-                project => Run("dotnet", $"pack src/{project}/{project}.csproj -c Release -o {ArtifactsDir} --no-build"));
+                () => Run("dotnet", $"pack src/LittleForker/LittleForker.csproj -c Release -o {ArtifactsDir} --no-build"));
 
             Target(Publish, DependsOn(Pack), () =>
             {
@@ -66,7 +62,7 @@ namespace build
                     Console.WriteLine("Feedz API key not available. Packages will not be pushed.");
                     return;
                 }
-                Console.WriteLine("Feedz API Key available. Pushing packages to Feedz...");
+                Console.WriteLine($"Feedz API Key available '{apiKey.Substring(0, 5)}...'. Pushing packages to Feedz...");
                 foreach (var packageToPush in packagesToPush)
                 {
                     Run("dotnet", $"nuget push {packageToPush} -s https://f.feedz.io/dh/oss-ci/nuget/index.json -k {apiKey} --skip-duplicate", noEcho: true);

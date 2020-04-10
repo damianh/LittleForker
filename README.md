@@ -1,6 +1,6 @@
 # Little Forker
 
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fdamianh%2FLittleForker%2Fbadge&style=flat&label=build)](https://actions-badge.atrox.dev/damianh/LittleForker/goto)
+[![CI](https://github.com/damianh/LittleForker/workflows/CI/badge.svg)](https://github.com/damianh/LittleForker/actions?query=workflow%3ACI)
 [![NuGet](https://img.shields.io/nuget/v/LittleForker.svg)](https://www.nuget.org/packages/LittleForker)
 [![feedz.io](https://img.shields.io/badge/endpoint.svg?url=https%3A%2F%2Ff.feedz.io%2Fdh%2Foss-ci%2Fshield%2FLittleForker%2Flatest)](https://f.feedz.io/dh/oss-ci/packages/LittleForker/latest/download)
 

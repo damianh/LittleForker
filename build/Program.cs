@@ -66,7 +66,7 @@ namespace build
                     Console.WriteLine("Feedz API key not available. Packages will not be pushed.");
                     return;
                 }
-                Console.WriteLine("Feedz API Key availabile. Pushing packages to Feedz...");
+                Console.WriteLine("Feedz API Key available. Pushing packages to Feedz...");
                 foreach (var packageToPush in packagesToPush)
                 {
                     Run("dotnet", $"nuget push {packageToPush} -s https://f.feedz.io/dh/oss-ci/nuget/index.json -k {apiKey} --skip-duplicate", noEcho: true);

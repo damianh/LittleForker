@@ -11,7 +11,7 @@ multi-process application.
 ## Features
 
   1. **ProcessExitedHelper**: a helper around `Process.Exited` with some additional
-     logging and event raising if the process has already existed or not found.
+     logging and event raising if the process has already exited or not found.
 
   2. **ProcessSupervisor**: allows a parent process to launch a child process
      and lifecycle is represented as a state machine. Supervisors can participate

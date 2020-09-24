@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LittleForker;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
 
 namespace NonTerminatingProcess
@@ -47,10 +48,10 @@ namespace NonTerminatingProcess
             var parentPid = _configRoot.GetValue<int?>("ParentProcessId");
 
             using (parentPid.HasValue
-                ? new ProcessExitedHelper(parentPid.Value, _ => ParentExited(parentPid.Value))
+                ? new ProcessExitedHelper(parentPid.Value, _ => ParentExited(parentPid.Value), new NullLoggerFactory())
                 : NoopDisposable.Instance)
             {
-                using (await CooperativeShutdown.Listen(ExitRequested))
+                using (await CooperativeShutdown.Listen(ExitRequested, new NullLoggerFactory()))
                 {
                     while(!_shutdown.IsCancellationRequested)
                     {

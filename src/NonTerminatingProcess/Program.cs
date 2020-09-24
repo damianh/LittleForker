@@ -17,6 +17,7 @@ namespace NonTerminatingProcess
         // enough time (100 seconds)
         private readonly CancellationTokenSource _shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(100));
         private readonly IConfigurationRoot _configRoot;
+        private readonly bool _ignoreShutdownSignal = false;
 
         static Program()
         {
@@ -38,6 +39,12 @@ namespace NonTerminatingProcess
             {
                 Debugger.Launch();
             }
+            
+            _ignoreShutdownSignal = _configRoot.GetValue<bool>("ignore-shutdown-signal", false);
+            if (_ignoreShutdownSignal)
+            {
+                Log.Logger.Information("Ignoring Shutdown Signal");
+            }
         }
 
         private async Task Run()
@@ -53,7 +60,7 @@ namespace NonTerminatingProcess
             {
                 using (await CooperativeShutdown.Listen(ExitRequested, new NullLoggerFactory()))
                 {
-                    while(!_shutdown.IsCancellationRequested)
+                    while(!_shutdown.IsCancellationRequested || _ignoreShutdownSignal)
                     {
                         await Task.Delay(100);
                     }

@@ -311,8 +311,13 @@ namespace LittleForker
                     // process acknowledging that it has received an EXIT signal
                     // only means the process has _started_ to shut down.
 
-                    // TODO detect if the app hasn't shut down in the allotted time and if so, kill it.
                     await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
+                    var exited = this.WhenStateIs(State.ExitedSuccessfully);
+                    var exitedWithError = this.WhenStateIs(State.ExitedWithError);
+
+                    await Task
+                        .WhenAny(exited, exitedWithError)
+                        .TimeoutAfter(timeout.Value);
                 }
                 catch (TimeoutException)
                 {

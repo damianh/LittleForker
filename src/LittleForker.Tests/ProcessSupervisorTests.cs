@@ -150,6 +150,24 @@ namespace LittleForker
 
             _outputHelper.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
         }
+        
+        [Fact]
+        public async Task When_stop_a_non_terminating_process_does_not_stop_within_timeout_should_be_killed()
+        {
+            var supervisor = new ProcessSupervisor(
+                _loggerFactory,
+                ProcessRunType.NonTerminating,
+                Environment.CurrentDirectory,
+                "dotnet",
+                "./NonTerminatingProcess/NonTerminatingProcess.dll --ignore-shutdown-signal=true");
+            supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
+            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+            supervisor.Start();
+            await supervisor.Stop(TimeSpan.FromSeconds(2));
+            await stateIsStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
+
+            _outputHelper.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
+        }
 
         [Fact]
         public void Can_attempt_to_restart_a_failed_short_running_process()

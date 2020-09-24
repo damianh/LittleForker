@@ -11,7 +11,7 @@ namespace LittleForker
     /// <summary>
     ///     Launches an process and tracks it's lifecycle .
     /// </summary>
-    public class ProcessSupervisor
+    public class ProcessSupervisor : IDisposable
     {
         private readonly ILogger _logger;
         private readonly string _arguments;
@@ -21,11 +21,12 @@ namespace LittleForker
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
         private readonly StateMachine<State, Trigger>.TriggerWithParameters<TimeSpan?> _stopTrigger;
         private readonly StateMachine<State, Trigger> _processStateMachine
-            = new StateMachine<State, Trigger>(State.NotStarted, FiringMode.Queued);
+            = new StateMachine<State, Trigger>(State.NotStarted, FiringMode.Immediate);
         private readonly string _workingDirectory;
         private Process _process;
-        private readonly object _lockObject = new object();
-        private ILoggerFactory _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
+        private bool _killed;
+        private readonly TaskQueue _taskQueue = new TaskQueue();
 
         /// <summary>
         ///     The state a process is in.
@@ -38,7 +39,8 @@ namespace LittleForker
             Stopping,
             ExitedSuccessfully,
             ExitedWithError,
-            ExitedUnexpectedly
+            ExitedUnexpectedly,
+            ExitedKilled
         }
 
         private enum Trigger
@@ -104,18 +106,23 @@ namespace LittleForker
                 .PermitIf(
                     Trigger.ProcessExit,
                     State.ExitedSuccessfully,
-                    () => processRunType == ProcessRunType.SelfTerminating && _process.ExitCode == 0,
+                    () => processRunType == ProcessRunType.SelfTerminating
+                          && _process.HasExited
+                          && _process.ExitCode == 0,
                     "SelfTerminating && ExitCode==0")
                 .PermitIf(
                     Trigger.ProcessExit,
                     State.ExitedWithError,
-                    () => processRunType == ProcessRunType.SelfTerminating && _process.ExitCode != 0,
+                    () => processRunType == ProcessRunType.SelfTerminating 
+                          && _process.HasExited 
+                          && _process.ExitCode != 0,
                     "SelfTerminating && ExitCode!=0")
                 .PermitIf(
                     Trigger.ProcessExit,
                     State.ExitedUnexpectedly,
-                    () => processRunType == ProcessRunType.NonTerminating,
-                    "NonTerminating")
+                    () => processRunType == ProcessRunType.NonTerminating 
+                          && _process.HasExited,
+                    "NonTerminating and died.")
                 .Permit(Trigger.Stop, State.Stopping)
                 .Permit(Trigger.StartError, State.StartFailed);
 
@@ -125,8 +132,19 @@ namespace LittleForker
 
             _processStateMachine
                 .Configure(State.Stopping)
-                .Permit(Trigger.ProcessExit, State.ExitedSuccessfully)
-                .OnEntryFromAsync(_stopTrigger, OnStop);
+                .OnEntryFromAsync(_stopTrigger, OnStop)
+                .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
+                    () =>
+                    {
+                        return processRunType == ProcessRunType.NonTerminating && !_killed;
+                    },
+                    "NonTerminating and shut down cleanly")
+                .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
+                    () =>
+                    {
+                        return processRunType == ProcessRunType.NonTerminating && _killed;
+                    },
+                    "NonTerminating and killed.");
 
             _processStateMachine
                 .Configure(State.StartFailed)
@@ -138,6 +156,10 @@ namespace LittleForker
 
             _processStateMachine
                 .Configure(State.ExitedUnexpectedly)
+                .Permit(Trigger.Start, State.Running);
+
+            _processStateMachine
+                .Configure(State.ExitedKilled)
                 .Permit(Trigger.Start, State.Running);
 
             _processStateMachine.OnTransitioned(transition =>
@@ -158,16 +180,7 @@ namespace LittleForker
         /// </summary>
         public IProcessInfo ProcessInfo { get; private set; }
 
-        public State CurrentState
-        {
-            get
-            {
-                lock (_lockObject)
-                { 
-                    return _processStateMachine.State;
-                }
-            }
-        }
+        public State CurrentState => _processStateMachine.State;
 
         /// <summary>
         ///     Raised when the process emits console data.
@@ -189,13 +202,12 @@ namespace LittleForker
         /// <summary>
         ///     Starts the process.
         /// </summary>
-        public void Start()
-        {
-            lock (_lockObject)
+        public Task Start() 
+            => _taskQueue.Enqueue(() =>
             {
+                _killed = false;
                 _processStateMachine.Fire(Trigger.Start);
-            }
-        }
+            });
 
         /// <summary>
         ///     Initiates a process stop. If a timeout is supplied (and greater
@@ -209,13 +221,8 @@ namespace LittleForker
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        public Task Stop(TimeSpan? timeout = null)
-        {
-            lock (_lockObject)
-            {
-                return _processStateMachine.FireAsync(_stopTrigger, timeout);
-            }
-        }
+        public Task Stop(TimeSpan? timeout = null) 
+            => _taskQueue.Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout));
 
         private void OnStart()
         {
@@ -254,11 +261,12 @@ namespace LittleForker
                 }
                 _process.Exited += (sender, args) =>
                 {
-                    lock (_lockObject)
+                    _logger.LogDebug("_process.Exited");
+                    _taskQueue.Enqueue(() =>
                     {
-                        _processStateMachine.FireAsync(Trigger.ProcessExit);
-                    }
-                }; // Multi-threaded access ?
+                        _processStateMachine.Fire(Trigger.ProcessExit);
+                    });
+                };
                 _process.Start();
                 _process.BeginOutputReadLine();
                 if (_captureStdErr)
@@ -271,10 +279,7 @@ namespace LittleForker
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Failed to start process {_processPath}");
-                lock (_lockObject)
-                {
-                    _processStateMachine.Fire(_startErrorTrigger, ex);
-                }
+                _processStateMachine.Fire(_startErrorTrigger, ex);
             }
         }
         
@@ -292,6 +297,7 @@ namespace LittleForker
                 try
                 {
                     _logger.LogInformation($"Killing process {_process.Id}");
+                    _killed = true;
                     _process.Kill();
                 }
                 catch (Exception ex)
@@ -316,7 +322,7 @@ namespace LittleForker
                 }
                 catch (TimeoutException)
                 {
-                    // Process doesn't support EXIT signal OR it didn't response in
+                    // Process doesn't support EXIT signal OR it didn't respond in
                     // time so Kill it. Note: still a race condition - the EXIT
                     // signal may have been received but just not acknowledged in
                     // time.
@@ -326,6 +332,7 @@ namespace LittleForker
                             $"Timed out waiting to signal the process to exit or the " +
                             $"process {_process.ProcessName} ({_process.Id}) did not shutdown in " +
                             $"the given time ({timeout})");
+                        _killed = true;
                         _process.Kill();
                     }
                     catch (Exception ex)
@@ -337,6 +344,12 @@ namespace LittleForker
                     }
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            _process?.Dispose();
+            _taskQueue?.Dispose();
         }
     }
 }

@@ -41,7 +41,7 @@ namespace LittleForker
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             var parentIsRunning = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Parent Process: {data}");
-            supervisor.Start();
+            await supervisor.Start();
             await parentIsRunning;
 
             // Monitor parent
@@ -67,7 +67,7 @@ namespace LittleForker
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             parentSupervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Parent: {data}");
             var parentIsRunning = parentSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
-            parentSupervisor.Start();
+            await parentSupervisor.Start();
             await parentIsRunning;
 
             // Start child
@@ -80,11 +80,11 @@ namespace LittleForker
             childSupervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Child: {data}");
             var childIsRunning = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
             var childHasStopped = childSupervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            childSupervisor.Start();
+            await childSupervisor.Start();
             await childIsRunning;
 
             // Stop parent
-            await parentSupervisor.Stop(TimeSpan.FromSeconds(2));
+            await parentSupervisor.Stop();
 
             // Wait for child to stop
             await childHasStopped.TimeoutAfter(TimeSpan.FromSeconds(2));

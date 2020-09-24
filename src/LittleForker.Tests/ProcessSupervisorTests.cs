@@ -24,7 +24,7 @@ namespace LittleForker
         {
             var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");
             var stateIsStartFailed = supervisor.WhenStateIs(ProcessSupervisor.State.StartFailed);
-            supervisor.Start();
+            await supervisor.Start();
 
             await stateIsStartFailed;
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
@@ -34,10 +34,10 @@ namespace LittleForker
         }
 
         [Fact]
-        public void Given_invalid_working_directory_then_state_should_be_StartError()
+        public async Task Given_invalid_working_directory_then_state_should_be_StartError()
         {
             var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/does_not_exist", "git.exe");
-            supervisor.Start();
+            await supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
             supervisor.OnStartException.ShouldNotBeNull();
@@ -60,7 +60,7 @@ namespace LittleForker
             var whenStateIsExited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             var whenStateIsExitedWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
 
-            supervisor.Start();
+            await supervisor.Start();
 
             var task = await Task.WhenAny(whenStateIsExited, whenStateIsExitedWithError);
 
@@ -82,10 +82,10 @@ namespace LittleForker
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2($"Process: {data}");
             var running = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
             var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
+            await supervisor.Start();
             await running;
 
-            await supervisor.Stop(TimeSpan.FromSeconds(4));
+            await supervisor.Stop(TimeSpan.FromSeconds(5));
             await exitedSuccessfully;
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
@@ -104,10 +104,10 @@ namespace LittleForker
                 "./SelfTerminatingProcess/SelfTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
             var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
+            await supervisor.Start();
             await stateIsStopped;
 
-            supervisor.Start();
+            await supervisor.Start();
             await stateIsStopped;
         }
 
@@ -121,16 +121,16 @@ namespace LittleForker
                 "dotnet",
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
-            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
-            await supervisor.Stop(TimeSpan.FromSeconds(2));
-            await stateIsStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
+            var exitedKilled = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedKilled);
+            await supervisor.Start();
+            await supervisor.Stop();
+            await exitedKilled.TimeoutAfter(TimeSpan.FromSeconds(5));
 
             // Restart
-            stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
+            var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+            await supervisor.Start();
             await supervisor.Stop(TimeSpan.FromSeconds(2));
-            await stateIsStopped;
+            await exitedSuccessfully;
         }
 
         [Fact]
@@ -143,8 +143,8 @@ namespace LittleForker
                 "dotnet",
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
-            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
+            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedKilled);
+            await supervisor.Start();
             await supervisor.Stop(); // No timeout so will just kill the process
             await stateIsStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
 
@@ -152,7 +152,7 @@ namespace LittleForker
         }
         
         [Fact]
-        public async Task When_stop_a_non_terminating_process_does_not_stop_within_timeout_should_be_killed()
+        public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_should_be_killed()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
@@ -161,28 +161,28 @@ namespace LittleForker
                 "dotnet",
                 "./NonTerminatingProcess/NonTerminatingProcess.dll --ignore-shutdown-signal=true");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
-            var stateIsStopped = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-            supervisor.Start();
+            var stateIsKilled = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedKilled);
+            await supervisor.Start();
             await supervisor.Stop(TimeSpan.FromSeconds(2));
-            await stateIsStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
+            await stateIsKilled.TimeoutAfter(TimeSpan.FromSeconds(5));
 
             _outputHelper.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
         }
 
         [Fact]
-        public void Can_attempt_to_restart_a_failed_short_running_process()
+        public async Task Can_attempt_to_restart_a_failed_short_running_process()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
                 ProcessRunType.NonTerminating,
                 Environment.CurrentDirectory,
                 "invalid.exe");
-            supervisor.Start();
+            await supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
             supervisor.OnStartException.ShouldNotBeNull();
 
-            supervisor.Start();
+            await supervisor.Start();
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.StartFailed);
             supervisor.OnStartException.ShouldNotBeNull();

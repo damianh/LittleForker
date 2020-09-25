@@ -20,14 +20,6 @@ namespace LittleForker
         }
 
         [Fact]
-        public void EmitDotGraph()
-        {
-            var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");
-
-            var dotGraph = supervisor.GetDotGraph();
-        }
-
-        [Fact]
         public async Task Given_invalid_process_path_then_state_should_be_StartError()
         {
             var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");
@@ -79,7 +71,7 @@ namespace LittleForker
         }
 
         [Fact]
-        public async Task Given_long_running_exe_then_should_exit_when_stopped()
+        public async Task Given_non_terminating_process_then_should_exit_when_stopped()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
@@ -142,7 +134,7 @@ namespace LittleForker
         }
 
         [Fact]
-        public async Task When_stop_a_non_terminating_process_then_should_exit_successfully()
+        public async Task When_stop_a_non_terminating_process_without_a_timeout_then_should_exit_killed()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
@@ -160,7 +152,7 @@ namespace LittleForker
         }
         
         [Fact]
-        public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_should_be_killed()
+        public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_then_should_exit_killed()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
@@ -173,6 +165,25 @@ namespace LittleForker
             await supervisor.Start();
             await supervisor.Stop(TimeSpan.FromSeconds(2));
             await stateIsKilled.TimeoutAfter(TimeSpan.FromSeconds(5));
+
+            _outputHelper.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
+        }
+
+        [Fact]
+        public async Task When_stop_a_non_terminating_process_with_non_zero_then_should_exit_error()
+        {
+            var supervisor = new ProcessSupervisor(
+                _loggerFactory,
+                ProcessRunType.NonTerminating,
+                Environment.CurrentDirectory,
+                "dotnet",
+                "./NonTerminatingProcess/NonTerminatingProcess.dll --exit-with-non-zero=true");
+            supervisor.OutputDataReceived += data => _outputHelper.WriteLine2(data);
+            var stateExitWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
+            await supervisor.Start();
+            await supervisor.Stop(TimeSpan.FromSeconds(5));
+            await stateExitWithError.TimeoutAfter(TimeSpan.FromSeconds(5));
+            supervisor.ProcessInfo.ExitCode.ShouldNotBe(0);
 
             _outputHelper.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
         }

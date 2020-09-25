@@ -134,16 +134,22 @@ namespace LittleForker
                 .Configure(State.Stopping)
                 .OnEntryFromAsync(_stopTrigger, OnStop)
                 .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
-                    () =>
-                    {
-                        return processRunType == ProcessRunType.NonTerminating && !_killed;
-                    },
+                    () => processRunType == ProcessRunType.NonTerminating 
+                          && !_killed 
+                          && _process.HasExited
+                          && _process.ExitCode == 0,
+                    "NonTerminating and shut down cleanly")
+                .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
+                    () => processRunType == ProcessRunType.NonTerminating
+                          && !_killed
+                          && _process.HasExited
+                          && _process.ExitCode != 0,
                     "NonTerminating and shut down cleanly")
                 .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                    () =>
-                    {
-                        return processRunType == ProcessRunType.NonTerminating && _killed;
-                    },
+                    () => processRunType == ProcessRunType.NonTerminating 
+                          && _killed
+                          && _process.HasExited
+                          && _process.ExitCode != 0,
                     "NonTerminating and killed.");
 
             _processStateMachine
@@ -317,7 +323,13 @@ namespace LittleForker
                     // only means the process has _started_ to shut down.
 
                     await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
-                    await this.WhenStateIs(State.ExitedSuccessfully).TimeoutAfter(timeout.Value);
+
+                    var exited = this.WhenStateIs(State.ExitedSuccessfully);
+                    var exitedWithError = this.WhenStateIs(State.ExitedWithError);
+
+                    await Task
+                        .WhenAny(exited, exitedWithError)
+                        .TimeoutAfter(timeout.Value);
                 }
                 catch (TimeoutException)
                 {
@@ -338,8 +350,9 @@ namespace LittleForker
                     {
                         _logger.LogWarning(
                             ex,
-                            $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                            "in the a race condition where process has already exited and an attempt to kill it.");
+                            $"Exception occurred attempting to kill process {_process.Id}. This may occur " +
+                            "in the a race condition where the process has exited, a timeout waiting for the exit," +
+                            "and the attempt to kill it.");
                     }
                 }
             }

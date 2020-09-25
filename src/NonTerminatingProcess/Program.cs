@@ -18,6 +18,7 @@ namespace NonTerminatingProcess
         private readonly CancellationTokenSource _shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(100));
         private readonly IConfigurationRoot _configRoot;
         private readonly bool _ignoreShutdownSignal;
+        private readonly bool _exitWithNonZero;
 
         static Program()
         {
@@ -43,11 +44,17 @@ namespace NonTerminatingProcess
             _ignoreShutdownSignal = _configRoot.GetValue<bool>("ignore-shutdown-signal", false);
             if (_ignoreShutdownSignal)
             {
-                Log.Logger.Information("Ignoring Shutdown Signal");
+                Log.Logger.Information("Will ignore Shutdown Signal");
+            }
+
+            _exitWithNonZero = _configRoot.GetValue<bool>("exit-with-non-zero", false);
+            if (_exitWithNonZero)
+            {
+                Log.Logger.Information("Will exit with non-zero exit code");
             }
         }
 
-        private async Task Run()
+        private async Task<int> Run()
         {
             var pid = Process.GetCurrentProcess().Id;
             Log.Logger.Information($"Long running process started. PID={pid}");
@@ -68,9 +75,11 @@ namespace NonTerminatingProcess
                     Log.Information("Exiting.");
                 }
             }
+
+            return _exitWithNonZero ? -1 : 0;
         }
 
-        static Task Main(string[] args) => new Program(args).Run();
+        static Task<int> Main(string[] args) => new Program(args).Run();
 
         private void ExitRequested()
         {

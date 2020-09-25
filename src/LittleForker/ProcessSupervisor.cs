@@ -261,7 +261,6 @@ namespace LittleForker
                 }
                 _process.Exited += (sender, args) =>
                 {
-                    _logger.LogDebug("_process.Exited");
                     _taskQueue.Enqueue(() =>
                     {
                         _processStateMachine.Fire(Trigger.ProcessExit);

@@ -327,6 +327,10 @@ namespace LittleForker
                     // time.
                     try
                     {
+                        _logger.LogWarning(
+                            $"Timed out waiting to signal the process to exit or the " +
+                            $"process {_process.ProcessName} ({_process.Id}) did not shutdown in " +
+                            $"the given time ({timeout})");
                         _process.Kill();
                     }
                     catch (Exception ex)

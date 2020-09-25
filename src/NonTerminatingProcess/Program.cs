@@ -79,7 +79,7 @@ namespace NonTerminatingProcess
             return _exitWithNonZero ? -1 : 0;
         }
 
-        static Task Main(string[] args) => new Program(args).Run();
+        static Task<int> Main(string[] args) => new Program(args).Run();
 
         private void ExitRequested()
         {

@@ -312,12 +312,7 @@ namespace LittleForker
                     // only means the process has _started_ to shut down.
 
                     await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
-                    var exited = this.WhenStateIs(State.ExitedSuccessfully);
-                    var exitedWithError = this.WhenStateIs(State.ExitedWithError);
-
-                    await Task
-                        .WhenAny(exited, exitedWithError)
-                        .TimeoutAfter(timeout.Value);
+                    await this.WhenStateIs(State.ExitedSuccessfully).TimeoutAfter(timeout.Value);
                 }
                 catch (TimeoutException)
                 {

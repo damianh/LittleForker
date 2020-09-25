@@ -1,0 +1,28 @@
+digraph {
+compound=true;
+node [shape=Mrecord]
+rankdir="LR"
+NotStarted [label="NotStarted"];
+Running [label="Running"];
+StartFailed [label="StartFailed"];
+Stopping [label="Stopping|entry / OnStop"];
+ExitedSuccessfully [label="ExitedSuccessfully"];
+ExitedUnexpectedly [label="ExitedUnexpectedly"];
+ExitedKilled [label="ExitedKilled"];
+ExitedWithError [label="ExitedWithError"];
+
+NotStarted -> Running [style="solid", label="Start / OnStart"];
+Running -> ExitedSuccessfully [style="solid", label="ProcessExit [SelfTerminating && ExitCode==0]"];
+Running -> ExitedWithError [style="solid", label="ProcessExit [SelfTerminating && ExitCode!=0]"];
+Running -> ExitedUnexpectedly [style="solid", label="ProcessExit [NonTerminating and died.]"];
+Running -> Stopping [style="solid", label="Stop"];
+Running -> StartFailed [style="solid", label="StartError / OnStartError"];
+StartFailed -> Running [style="solid", label="Start / OnStart"];
+Stopping -> ExitedSuccessfully [style="solid", label="ProcessExit [NonTerminating and shut down cleanly]"];
+Stopping -> ExitedKilled [style="solid", label="ProcessExit [NonTerminating and killed.]"];
+ExitedSuccessfully -> Running [style="solid", label="Start / OnStart"];
+ExitedUnexpectedly -> Running [style="solid", label="Start / OnStart"];
+ExitedKilled -> Running [style="solid", label="Start / OnStart"];
+ init [label="", shape=point];
+ init -> NotStarted[style = "solid"]
+}

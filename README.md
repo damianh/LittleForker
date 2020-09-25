@@ -95,7 +95,8 @@ A process's state is represented by `ProcessSupervisor.State` enum:
 - Stopping,
 - ExitedSuccessfully,
 - ExitedWithError,
-- ExitedUnexpectedly
+- ExitedUnexpectedly,
+- ExitedKilled
 
 ... with the transitions between them described with this state machine depending
 whether self-terminating or non-terminating:
@@ -118,31 +119,33 @@ supervisor.StateChanged += state => { /* handle state changes */ };
 supervisor.OutputDataReceived += s => { /* console output */ }
 
 // start the supervisor which will launch the process
-supervisor.Start();
+await supervisor.Start();
 
 // ... some time later
-// attempts a co-operative shutdown with a default timeout of 3 
+// attempts a co-operative shutdown with a timeout of 3
 // seconds otherwise kills the process
 
-supervisor.Stop();
+await supervisor.Stop(TimeSpan.FromSeconds(3));
 ```
 
 With an async extension, it is possible to await a supervisor state:
 
 ```csharp
-var stateIsExited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
-supervisor.Start();
-await stateIsExited;
+var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+await supervisor.Start();
+await Task.WhenAny(exitedSuccessfully).
 ```
 
 You can also leverage tasks to combine waiting for various expected states:
 
 ```csharp
 var startFailed = supervisor.WhenStateIs(ProcessSupervisor.State.StartFailed);
-var exited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
 var exitedWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
 
-var result = await Task.WhenAny(startFailed, exited, exitedWithError);
+supervisor.Start();
+
+var result = await Task.WhenAny(startFailed, exitedSuccessfully, exitedWithError);
 if(result == startFailed)
 {
    Log.Error(supervisor.OnStartException, $"Process start failed {supervisor.OnStartException.Message}")
@@ -154,15 +157,15 @@ if(result == startFailed)
 
 Cooperative shutdown allows a "parent" process to instruct a "child" process to
 shut down. Different to `SIGTERM` and `Process.Kill()` in that it allows a child
-to acknowledge receipt of the request and clean up cleanly. Combined with 
+to acknowledge receipt of the request and shut down cleanly (and fast!). Combined with
 `Supervisor.Stop()` a parent can send the signal and then wait for `ExitedSuccessfully`.
 
 The inter-process communication is done via named pipes where the pipe name is
 of the format `LittleForker-{processId}`
 
-For a "child" process to be able receive co-operative shut down requests it uses 
-`CooperativeShutdown.Listen()` to listen on a named pipe. Handling signals should 
-be fast operations are are typically implemented by signalling to another mechanism
+For a "child" process to be able receive co-operative shut down requests it uses
+`CooperativeShutdown.Listen()` to listen on a named pipe. Handling signals should
+be fast operations and are typically implemented by signalling to another mechanism
 to start cleanly shutting down:
 
 ```csharp
@@ -186,13 +189,15 @@ typically won't be using this explicitly.
 ## Building
 
 With docker which is same as CI:
+
 - Run `build.cmd`/`build.sh` to compile, run tests and build package.
 
-Local build which requres .NET Core SDK 3.1:
-- Run `build-local.cmd`/`build-local.sh` to compile, run tests and build package. 
+Local build which requires .NET Core SDKs 2.1, 3.1 and .NET 5.0:
+
+- Run `build-local.cmd`/`build-local.sh` to compile, run tests and build package.
 
 ## Credits & Feedback
 
-[@randompunter](https://twitter.com/randompunter) for feedback / criticism.
+[@randompunter](https://twitter.com/randompunter) for feedback.
 
 Hat tip to [@markrendle](https://twitter.com/markrendle) for the project name.

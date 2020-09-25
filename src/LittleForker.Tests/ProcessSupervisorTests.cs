@@ -20,6 +20,14 @@ namespace LittleForker
         }
 
         [Fact]
+        public void EmitDotGraph()
+        {
+            var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");
+
+            var dotGraph = supervisor.GetDotGraph();
+        }
+
+        [Fact]
         public async Task Given_invalid_process_path_then_state_should_be_StartError()
         {
             var supervisor = new ProcessSupervisor(_loggerFactory, ProcessRunType.NonTerminating, "c:/", "invalid.exe");

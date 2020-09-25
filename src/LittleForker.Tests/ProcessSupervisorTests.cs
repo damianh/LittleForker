@@ -142,7 +142,7 @@ namespace LittleForker
         }
 
         [Fact]
-        public async Task When_stop_a_non_terminating_process_then_should_exit_successfully()
+        public async Task When_stop_a_non_terminating_process_without_a_timeout_then_should_exit_killed()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,
@@ -160,7 +160,7 @@ namespace LittleForker
         }
         
         [Fact]
-        public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_should_be_killed()
+        public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_then_should_be_killed()
         {
             var supervisor = new ProcessSupervisor(
                 _loggerFactory,

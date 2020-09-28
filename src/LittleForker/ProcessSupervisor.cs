@@ -144,7 +144,7 @@ namespace LittleForker
                           && !_killed
                           && _process.HasExited
                           && _process.ExitCode != 0,
-                    "NonTerminating and shut down cleanly")
+                    "NonTerminating and shut down with non-zero exit code")
                 .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
                     () => processRunType == ProcessRunType.NonTerminating 
                           && _killed
@@ -227,8 +227,12 @@ namespace LittleForker
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        public Task Stop(TimeSpan? timeout = null) 
-            => _taskQueue.Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout));
+        public async Task Stop(TimeSpan? timeout = null)
+        {
+            await await _taskQueue
+                .Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout))
+                .ConfigureAwait(false);
+        }
 
         private void OnStart()
         {
@@ -325,11 +329,14 @@ namespace LittleForker
                     var exited = this.WhenStateIs(State.ExitedSuccessfully);
                     var exitedWithError = this.WhenStateIs(State.ExitedWithError);
 
-                    await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
+                    await CooperativeShutdown
+                        .SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value)
+                        .ConfigureAwait(false);
 
                     await Task
                         .WhenAny(exited, exitedWithError)
-                        .TimeoutAfter(timeout.Value);
+                        .TimeoutAfter(timeout.Value)
+                        .ConfigureAwait(false);
                 }
                 catch (TimeoutException)
                 {

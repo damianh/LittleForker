@@ -81,12 +81,12 @@ namespace LittleForker
                 "./NonTerminatingProcess/NonTerminatingProcess.dll");
             supervisor.OutputDataReceived += data => _outputHelper.WriteLine2($"Process: {data}");
             var running = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
-            var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
             await supervisor.Start();
+
+            supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.Running);
             await running;
 
             await supervisor.Stop(TimeSpan.FromSeconds(5));
-            await exitedSuccessfully;
 
             supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedSuccessfully);
             supervisor.OnStartException.ShouldBeNull();

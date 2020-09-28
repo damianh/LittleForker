@@ -325,11 +325,14 @@ namespace LittleForker
                     var exited = this.WhenStateIs(State.ExitedSuccessfully);
                     var exitedWithError = this.WhenStateIs(State.ExitedWithError);
 
-                    await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
+                    await CooperativeShutdown
+                        .SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value)
+                        .ConfigureAwait(false);
 
                     await Task
                         .WhenAny(exited, exitedWithError)
-                        .TimeoutAfter(timeout.Value);
+                        .TimeoutAfter(timeout.Value)
+                        .ConfigureAwait(false);
                 }
                 catch (TimeoutException)
                 {

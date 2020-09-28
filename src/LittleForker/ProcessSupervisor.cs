@@ -322,10 +322,10 @@ namespace LittleForker
                     // process acknowledging that it has received an EXIT signal
                     // only means the process has _started_ to shut down.
 
-                    await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
-
                     var exited = this.WhenStateIs(State.ExitedSuccessfully);
                     var exitedWithError = this.WhenStateIs(State.ExitedWithError);
+
+                    await CooperativeShutdown.SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value);
 
                     await Task
                         .WhenAny(exited, exitedWithError)

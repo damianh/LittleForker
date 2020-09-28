@@ -46,7 +46,7 @@ namespace LittleForker
             {
                 try
                 {
-                    await listener.Listen();
+                    await listener.Listen().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -66,23 +66,22 @@ namespace LittleForker
         // TODO Should exceptions rethrow or should we let the caller that the signalling failed i.e. Task<book>?
         public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
         {
-            var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{typeof(CooperativeShutdown).Name}");
+            var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
             var pipeName = GetPipeName(processId);
             using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
             {
                 try
                 {
-                    await pipe.ConnectAsync((int)TimeSpan.FromSeconds(3).TotalMilliseconds);
+                    await pipe.ConnectAsync((int)TimeSpan.FromSeconds(3).TotalMilliseconds).ConfigureAwait(false);
                     var streamWriter = new StreamWriter(pipe);
                     var streamReader = new StreamReader(pipe, true);
                     logger.LogInformation($"Signalling EXIT to client on pipe {pipeName}...");
-                    await SignalExit(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3));
+                    await SignalExit(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
                     logger.LogInformation($"Signalling EXIT to client on pipe {pipeName} successful.");
                 }
                 catch (IOException ex)
                 {
                     logger.LogError(ex, $"Failed to signal EXIT to client on pipe {pipeName}.");
-                    
                 }
                 catch (TimeoutException ex)
                 {
@@ -97,9 +96,9 @@ namespace LittleForker
 
         private static async Task SignalExit(TextWriter streamWriter, TextReader streamReader)
         {
-            await streamWriter.WriteLineAsync("EXIT");
-            await streamWriter.FlushAsync();
-            await streamReader.ReadLineAsync().TimeoutAfter(TimeSpan.FromSeconds(3)); // Reads an 'OK'.
+            await streamWriter.WriteLineAsync("EXIT").ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
+            await streamReader.ReadLineAsync().TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false); // Reads an 'OK'.
         }
 
         private sealed class CooperativeShutdownListener : IDisposable
@@ -133,7 +132,10 @@ namespace LittleForker
 
                     _logger.LogInformation($"Listening on pipe '{_pipeName}'.");
 
-                    await pipe.WaitForConnectionAsync(_stopListening.Token);
+                    await pipe
+                        .WaitForConnectionAsync(_stopListening.Token)
+                        .ConfigureAwait(false);
+
                     _logger.LogInformation($"Client connected to pipe '{_pipeName}'.");
 
                     try
@@ -151,7 +153,8 @@ namespace LittleForker
                                         break;
                                     }
 
-                                    var s = await reader.ReadLineAsync().WithCancellation(_stopListening.Token);
+                                    var s = await reader.ReadLineAsync().WithCancellation(_stopListening.Token)
+                                        .ConfigureAwait(false);
 
                                     if (s != "EXIT")
                                     {
@@ -160,7 +163,7 @@ namespace LittleForker
 
                                     _logger.LogInformation($"Received command from server: {s}");
 
-                                    await writer.WriteLineAsync("OK");
+                                    await writer.WriteLineAsync("OK").ConfigureAwait(false);
                                     _logger.LogInformation("Responded with OK");
 
                                     _logger.LogInformation("Raising exit request...");

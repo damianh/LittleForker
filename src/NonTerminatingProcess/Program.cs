@@ -84,6 +84,13 @@ namespace NonTerminatingProcess
         private void ExitRequested()
         {
             Log.Logger.Information("Cooperative shutdown requested.");
+
+            if (_ignoreShutdownSignal)
+            {
+                Log.Logger.Information("Shut down signal ignored.");
+                return;
+            }
+
             _shutdown.Cancel();
         }
 

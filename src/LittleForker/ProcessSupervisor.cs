@@ -227,8 +227,12 @@ namespace LittleForker
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        public Task Stop(TimeSpan? timeout = null) 
-            => _taskQueue.Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout));
+        public async Task Stop(TimeSpan? timeout = null)
+        {
+            await await _taskQueue
+                .Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout))
+                .ConfigureAwait(false);
+        }
 
         private void OnStart()
         {

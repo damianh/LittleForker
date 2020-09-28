@@ -144,7 +144,7 @@ namespace LittleForker
                           && !_killed
                           && _process.HasExited
                           && _process.ExitCode != 0,
-                    "NonTerminating and shut down cleanly")
+                    "NonTerminating and shut down with non-zero exit code")
                 .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
                     () => processRunType == ProcessRunType.NonTerminating 
                           && _killed

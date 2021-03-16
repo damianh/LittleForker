@@ -33,7 +33,7 @@ CI packages are on personal feed: https://www.myget.org/F/dh/api/v3/index.json
 ### 1. ProcessExitedHelper
 
 This helper is typically used by "child" processes to monitor a "parent" process
-so that it exits itself when the parent exists. It's also safe guard in
+so that it exits itself when the parent exits. It's also safe guard in
 co-operative shut down if the parent failed to signal correctly (i.e. it
 crashed).
 

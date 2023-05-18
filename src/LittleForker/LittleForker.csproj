@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <DebugType>full</DebugType>
     <Authors>Damian Hickey</Authors>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>preview</LangVersion>
     <PackageProjectUrl>https://github.com/damianh/LittleForker</PackageProjectUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>process-supervision, child-process</PackageTags>

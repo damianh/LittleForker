@@ -22,3 +22,4 @@ jobs:
     - name: Build and Test
       run: bash build.sh
       shell: bash
+      timeout-minutes: 5

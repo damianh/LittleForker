@@ -6,18 +6,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker", "src\LittleF
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker.Tests", "src\LittleForker.Tests\LittleForker.Tests.csproj", "{7091F216-A22D-45A9-972F-F45EEFA6CE84}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6F430B90-4C24-4824-905E-AA7364AB8F95}"
-	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		build-local.cmd = build-local.cmd
-		build-local.sh = build-local.sh
-		build.cmd = build.cmd
-		build.sh = build.sh
-		ProcessStates.puml = ProcessStates.puml
-		README.md = README.md
-		state-machine.png = state-machine.png
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NonTerminatingProcess", "src\NonTerminatingProcess\NonTerminatingProcess.csproj", "{D68ABF78-2FC6-4EBD-AAAB-742637896206}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SelfTerminatingProcess", "src\SelfTerminatingProcess\SelfTerminatingProcess.csproj", "{F85DBC32-C585-4941-A210-5DE05A231BDF}"

@@ -40,7 +40,7 @@ public static class CooperativeShutdown
         var listener = new CooperativeShutdownListener(
             GetPipeName(Process.GetCurrentProcess().Id),
             shutdownRequested,
-            loggerFactory.CreateLogger($"{nameof(LittleForker)}.{typeof(CooperativeShutdown).Name}"));
+            loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}"));
             
         Task.Run(async () =>
         {

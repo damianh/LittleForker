@@ -1,18 +1,17 @@
 ﻿using System.Diagnostics;
 
-namespace LittleForker
+namespace LittleForker;
+
+internal class ProcessInfo : IProcessInfo
 {
-    internal class ProcessInfo : IProcessInfo
+    private readonly Process _process;
+
+    internal ProcessInfo(Process process)
     {
-        private readonly Process _process;
-
-        internal ProcessInfo(Process process)
-        {
-            _process = process;
-        }
-
-        public int ExitCode => _process.ExitCode;
-
-        public int Id => _process.Id;
+        _process = process;
     }
+
+    public int ExitCode => _process.ExitCode;
+
+    public int Id => _process.Id;
 }

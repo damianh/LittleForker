@@ -1,12 +1,11 @@
 ﻿using System;
 
-namespace SelfTerminatingProcess
+namespace SelfTerminatingProcess;
+
+public class Program
 {
-    public class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Done.");
-        }
+        Console.WriteLine("Done.");
     }
 }

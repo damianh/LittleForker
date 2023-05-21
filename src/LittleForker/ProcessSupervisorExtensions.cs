@@ -1,51 +1,50 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace LittleForker
+namespace LittleForker;
+
+public static  class ProcessSupervisorExtensions
 {
-    public static  class ProcessSupervisorExtensions
+    public static Task WhenStateIs(
+        this ProcessSupervisor  processSupervisor,
+        ProcessSupervisor.State processState,
+        CancellationToken       cancellationToken = default)
     {
-        public static Task WhenStateIs(
-            this ProcessSupervisor processSupervisor,
-            ProcessSupervisor.State processState,
-            CancellationToken cancellationToken = default)
+        var taskCompletionSource = new TaskCompletionSource<int>();
+        cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
+
+        void Handler(ProcessSupervisor.State state)
         {
-            var taskCompletionSource = new TaskCompletionSource<int>();
-            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
-
-            void Handler(ProcessSupervisor.State state)
+            if (processState == state)
             {
-                if (processState == state)
-                {
-                    taskCompletionSource.SetResult(0);
-                    processSupervisor.StateChanged -= Handler;
-                }
+                taskCompletionSource.SetResult(0);
+                processSupervisor.StateChanged -= Handler;
             }
-
-            processSupervisor.StateChanged += Handler;
-
-            return taskCompletionSource.Task;
         }
 
-        public static Task WhenOutputStartsWith(
-            this ProcessSupervisor processSupervisor,
-            string startsWith,
-            CancellationToken cancellationToken = default)
+        processSupervisor.StateChanged += Handler;
+
+        return taskCompletionSource.Task;
+    }
+
+    public static Task WhenOutputStartsWith(
+        this ProcessSupervisor processSupervisor,
+        string                 startsWith,
+        CancellationToken      cancellationToken = default)
+    {
+        var taskCompletionSource = new TaskCompletionSource<int>();
+        cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
+
+        void Handler(string data)
         {
-            var taskCompletionSource = new TaskCompletionSource<int>();
-            cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
-
-            void Handler(string data)
+            if (data != null && data.StartsWith(startsWith))
             {
-                if (data != null && data.StartsWith(startsWith))
-                {
-                    taskCompletionSource.SetResult(0);
-                    processSupervisor.OutputDataReceived -= Handler;
-                }
+                taskCompletionSource.SetResult(0);
+                processSupervisor.OutputDataReceived -= Handler;
             }
-
-            processSupervisor.OutputDataReceived += Handler;
-            return taskCompletionSource.Task;
         }
+
+        processSupervisor.OutputDataReceived += Handler;
+        return taskCompletionSource.Task;
     }
 }

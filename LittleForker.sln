@@ -8,8 +8,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker.Tests", "src\L
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NonTerminatingProcess", "src\NonTerminatingProcess\NonTerminatingProcess.csproj", "{D68ABF78-2FC6-4EBD-AAAB-742637896206}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SelfTerminatingProcess", "src\SelfTerminatingProcess\SelfTerminatingProcess.csproj", "{F85DBC32-C585-4941-A210-5DE05A231BDF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,10 +26,6 @@ Global
 		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

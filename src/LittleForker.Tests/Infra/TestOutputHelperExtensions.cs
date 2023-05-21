@@ -1,15 +1,14 @@
 ﻿using Xunit.Abstractions;
 
-namespace LittleForker
+namespace LittleForker;
+
+public static class TestOutputHelperExtensions
 {
-    public static class TestOutputHelperExtensions
+    public static void WriteLine2(this ITestOutputHelper outputHelper, object o)
     {
-        public static void WriteLine2(this ITestOutputHelper outputHelper, object o)
+        if (o != null)
         {
-            if (o != null)
-            {
-                outputHelper.WriteLine(o.ToString());
-            }
+            outputHelper.WriteLine(o.ToString());
         }
     }
 }

@@ -9,7 +9,5 @@
     <NoWarn>1701;1702;1705;1591</NoWarn>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <MinVerMinimumMajorMinor>2.0</MinVerMinimumMajorMinor>
-    <BUildNumber Condition="'$(GITHUB_RUN_NUMBER)' == ''">0</BUildNumber>
-    <MinVerBuildMetadata>build.$(BuildNumber)</MinVerBuildMetadata>
   </PropertyGroup>
 </Project>

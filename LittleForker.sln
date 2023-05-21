@@ -1,22 +1,14 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29613.14
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33627.172
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker", "src\LittleForker\LittleForker.csproj", "{F68CAE00-43E0-4B81-87A3-AE70F24D3284}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LittleForker.Tests", "src\LittleForker.Tests\LittleForker.Tests.csproj", "{7091F216-A22D-45A9-972F-F45EEFA6CE84}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6F430B90-4C24-4824-905E-AA7364AB8F95}"
-	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		build-local.cmd = build-local.cmd
-		build-local.sh = build-local.sh
-		build.cmd = build.cmd
-		build.sh = build.sh
-		ProcessStates.puml = ProcessStates.puml
-		README.md = README.md
-		state-machine.png = state-machine.png
-	EndProjectSection
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NonTerminatingProcess", "src\NonTerminatingProcess\NonTerminatingProcess.csproj", "{D68ABF78-2FC6-4EBD-AAAB-742637896206}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SelfTerminatingProcess", "src\SelfTerminatingProcess\SelfTerminatingProcess.csproj", "{F85DBC32-C585-4941-A210-5DE05A231BDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +24,14 @@ Global
 		{7091F216-A22D-45A9-972F-F45EEFA6CE84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7091F216-A22D-45A9-972F-F45EEFA6CE84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7091F216-A22D-45A9-972F-F45EEFA6CE84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D68ABF78-2FC6-4EBD-AAAB-742637896206}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F85DBC32-C585-4941-A210-5DE05A231BDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

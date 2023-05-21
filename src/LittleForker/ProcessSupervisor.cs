@@ -6,32 +6,6 @@ using Stateless.Graph;
 
 namespace LittleForker;
 
-public class ProcessSupervisorSettings
-{
-    public ProcessRunType   ProcessRunType       { get; }
-    public string           WorkingDirectory     { get; }
-    public string           ProcessPath          { get; }
-    public string           Arguments            { get; set; } = string.Empty;
-    public StringDictionary EnvironmentVariables { get; set; } = new();
-    public bool             CaptureStdErr        { get; set; } = false;
-
-    /// <summary>
-    ///    Initializes a new instance of <see cref="ProcessSupervisorSettings"/>
-    /// </summary>
-    /// <param name="processRunType"></param>
-    /// <param name="workingDirectory"></param>
-    /// <param name="processPath"></param>
-    public ProcessSupervisorSettings(
-        ProcessRunType processRunType,
-        string workingDirectory,
-        string processPath)
-    {
-        ProcessRunType   = processRunType;
-        WorkingDirectory = workingDirectory;
-        ProcessPath = processPath;
-    }
-}
-
 /// <summary>
 ///     Launches an process and tracks it's lifecycle .
 /// </summary>
@@ -121,24 +95,9 @@ public class ProcessSupervisor : IDisposable
             .OnEntryFrom(Trigger.Start, OnStart)
             .PermitIf(
                 Trigger.ProcessExit,
-                State.ExitedSuccessfully,
-                () => settings.ProcessRunType == ProcessRunType.SelfTerminating
-                      && _process.HasExited
-                      && _process.ExitCode == 0,
-                "SelfTerminating && ExitCode==0")
-            .PermitIf(
-                Trigger.ProcessExit,
-                State.ExitedWithError,
-                () => settings.ProcessRunType == ProcessRunType.SelfTerminating 
-                      && _process.HasExited 
-                      && _process.ExitCode != 0,
-                "SelfTerminating && ExitCode!=0")
-            .PermitIf(
-                Trigger.ProcessExit,
                 State.ExitedUnexpectedly,
-                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
-                      && _process.HasExited,
-                "NonTerminating and died.")
+                () => _process.HasExited,
+                "NonTerminating but exited.")
             .Permit(Trigger.Stop, State.Stopping)
             .Permit(Trigger.StartError, State.StartFailed);
 
@@ -150,20 +109,17 @@ public class ProcessSupervisor : IDisposable
             .Configure(State.Stopping)
             .OnEntryFromAsync(_stopTrigger, OnStop)
             .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
-                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
-                      && !_killed 
+                () => !_killed 
                       && _process.HasExited
                       && _process.ExitCode == 0,
                 "NonTerminating and shut down cleanly")
             .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
-                () => settings.ProcessRunType == ProcessRunType.NonTerminating
-                      && !_killed
+                () => !_killed
                       && _process.HasExited
                       && _process.ExitCode != 0,
                 "NonTerminating and shut down with non-zero exit code")
             .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
-                      && _killed
+                () => _killed
                       && _process.HasExited
                       && _process.ExitCode != 0,
                 "NonTerminating and killed.");

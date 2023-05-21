@@ -34,7 +34,7 @@ public class ProcessExitedHelperTests
     {
         // Start parent
         var settings =
-            new ProcessSupervisorSettings(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet")
+            new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
             {
                 Arguments = "./NonTerminatingProcess/NonTerminatingProcess.dll"
             };
@@ -60,7 +60,7 @@ public class ProcessExitedHelperTests
     {
         // Start parent
         var parentSettings =
-            new ProcessSupervisorSettings(ProcessRunType.NonTerminating, Environment.CurrentDirectory, "dotnet")
+            new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
             {
                 Arguments = "./NonTerminatingProcess/NonTerminatingProcess.dll"
             };
@@ -72,7 +72,7 @@ public class ProcessExitedHelperTests
         await parentIsRunning;
 
         // Start child
-        var childSettings = new ProcessSupervisorSettings(ProcessRunType.SelfTerminating,  Environment.CurrentDirectory, "dotnet")
+        var childSettings = new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
         {
             Arguments = $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo.Id}"
         };

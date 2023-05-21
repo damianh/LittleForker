@@ -11,10 +11,9 @@ namespace LittleForker;
 /// </summary>
 internal class TaskQueue : IDisposable
 {
-    private readonly ConcurrentQueue<Func<Task>> _taskQueue    = new ConcurrentQueue<Func<Task>>();
-    private readonly CancellationTokenSource     _isDisposed   = new CancellationTokenSource();
-    private readonly InterlockedBoolean          _isProcessing = new InterlockedBoolean();
-
+    private readonly ConcurrentQueue<Func<Task>> _taskQueue    = new();
+    private readonly CancellationTokenSource     _isDisposed   = new();
+    private readonly InterlockedBoolean          _isProcessing = new();
 
     /// <summary>
     ///     Enqueues a task for processing.
@@ -49,7 +48,7 @@ internal class TaskQueue : IDisposable
     /// <summary>
     ///     Enqueues a task for processing.
     /// </summary>
-    /// <param name="function">The operation to invoke that is co-operatively cancelable.</param>
+    /// <param name="function">The operation to invoke that is cooperatively cancelable.</param>
     /// <returns>A task representing the operation. Awaiting is optional.</returns>
     public Task Enqueue(Func<CancellationToken, Task> function)
     {
@@ -64,7 +63,7 @@ internal class TaskQueue : IDisposable
     /// <summary>
     ///     Enqueues a task for processing.
     /// </summary>
-    /// <param name="function">The operation to invoke that is co-operatively cancelable.</param>
+    /// <param name="function">The operation to invoke that is cooperatively  cancelable.</param>
     /// <returns>A task representing the operation. Awaiting is optional.</returns>
     public Task<TResult> Enqueue<TResult>(Func<CancellationToken, Task<TResult>> function)
     {

@@ -20,13 +20,12 @@ public class ProcessSupervisor : IDisposable
     private readonly string                                                        _processPath;
     private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
     private readonly StateMachine<State, Trigger>.TriggerWithParameters<TimeSpan?> _stopTrigger;
-    private readonly StateMachine<State, Trigger> _processStateMachine
-        = new StateMachine<State, Trigger>(State.NotStarted, FiringMode.Immediate);
+    private readonly StateMachine<State, Trigger> _processStateMachine = new(State.NotStarted, FiringMode.Immediate);
     private readonly string         _workingDirectory;
     private          Process        _process;
     private readonly ILoggerFactory _loggerFactory;
     private          bool           _killed;
-    private readonly TaskQueue      _taskQueue = new TaskQueue();
+    private readonly TaskQueue      _taskQueue = new();
 
     /// <summary>
     ///     The state a process is in.

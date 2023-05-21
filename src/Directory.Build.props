@@ -8,6 +8,6 @@
     <PackageTags>child-process;process-manager;process-supervision</PackageTags>
     <NoWarn>1701;1702;1705;1591</NoWarn>
     <MinVerTagPrefix>v</MinVerTagPrefix>
-    <MinVerMinimumMajorMinor>2.0</MinVerMinimumMajorMinor>
+    <MinVerMinimumMajorMinor>4.0</MinVerMinimumMajorMinor>
   </PropertyGroup>
 </Project>

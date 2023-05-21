@@ -222,11 +222,14 @@ public class ProcessSupervisor : IDisposable
             };
 
             // Copy over environment variables
-            foreach (string key in _environmentVariables.Keys)
+            if (_environmentVariables != null)
             {
-                processStartInfo.EnvironmentVariables[key] = _environmentVariables[key];
+                foreach (string key in _environmentVariables.Keys)
+                {
+                    processStartInfo.EnvironmentVariables[key] = _environmentVariables[key];
+                }
             }
-            
+
 
             // Start the process and capture it's output.
             _process = new Process

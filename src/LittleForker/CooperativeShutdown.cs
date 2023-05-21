@@ -64,10 +64,15 @@ public static class CooperativeShutdown
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns>A task representing the operation.</returns>
     // TODO Should exceptions rethrow or should we let the caller that the signalling failed i.e. Task<book>?
-    public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
+    public static Task SignalExit(int processId, ILoggerFactory loggerFactory)
+    {
+        var pipeName = GetPipeName(processId);
+        return SignalExit(pipeName, loggerFactory);
+    }
+
+    public static async Task SignalExit(string pipeName, ILoggerFactory loggerFactory)
     {
         var logger   = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
-        var pipeName = GetPipeName(processId);
         using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
         {
             try

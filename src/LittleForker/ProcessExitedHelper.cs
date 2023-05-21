@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace LittleForker;
@@ -12,8 +10,8 @@ namespace LittleForker;
 /// </summary>
 public sealed class ProcessExitedHelper : IDisposable
 {
-    private          int     _processExitedRaised;
-    private readonly Process _process;
+    private          int      _processExitedRaised;
+    private readonly Process? _process;
 
     /// <summary>
     ///     Initializes a new instance of <see cref="ProcessExitedHelper"/>

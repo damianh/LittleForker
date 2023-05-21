@@ -1,12 +1,36 @@
-﻿using System;
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Stateless;
 using Stateless.Graph;
 
 namespace LittleForker;
+
+public class ProcessSupervisorSettings
+{
+    public ProcessRunType   ProcessRunType       { get; }
+    public string           WorkingDirectory     { get; }
+    public string           ProcessPath          { get; }
+    public string           Arguments            { get; set; } = string.Empty;
+    public StringDictionary EnvironmentVariables { get; set; } = new();
+    public bool             CaptureStdErr        { get; set; } = false;
+
+    /// <summary>
+    ///    Initializes a new instance of <see cref="ProcessSupervisorSettings"/>
+    /// </summary>
+    /// <param name="processRunType"></param>
+    /// <param name="workingDirectory"></param>
+    /// <param name="processPath"></param>
+    public ProcessSupervisorSettings(
+        ProcessRunType processRunType,
+        string workingDirectory,
+        string processPath)
+    {
+        ProcessRunType   = processRunType;
+        WorkingDirectory = workingDirectory;
+        ProcessPath = processPath;
+    }
+}
 
 /// <summary>
 ///     Launches an process and tracks it's lifecycle .
@@ -20,12 +44,13 @@ public class ProcessSupervisor : IDisposable
     private readonly string                                                        _processPath;
     private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
     private readonly StateMachine<State, Trigger>.TriggerWithParameters<TimeSpan?> _stopTrigger;
-    private readonly StateMachine<State, Trigger> _processStateMachine = new(State.NotStarted, FiringMode.Immediate);
-    private readonly string         _workingDirectory;
-    private          Process        _process;
-    private readonly ILoggerFactory _loggerFactory;
-    private          bool           _killed;
-    private readonly TaskQueue      _taskQueue = new();
+    private readonly StateMachine<State, Trigger>                                  _processStateMachine = new(State.NotStarted, FiringMode.Immediate);
+    private readonly string                                                        _workingDirectory;
+    private          Process                                                       _process;
+    private readonly ProcessSupervisorSettings                                     _settings;
+    private readonly ILoggerFactory                                                _loggerFactory;
+    private          bool                                                          _killed;
+    private readonly TaskQueue                                                     _taskQueue = new();
 
     /// <summary>
     ///     The state a process is in.
@@ -62,6 +87,7 @@ public class ProcessSupervisor : IDisposable
     /// <param name="processRunType">
     ///     The process run type.
     /// </param>
+    /// <param name="settings"></param>
     /// <param name="loggerFactory">
     ///     A logger factory.
     /// </param>
@@ -75,22 +101,13 @@ public class ProcessSupervisor : IDisposable
     ///     A flag to indicated whether to capture standard error output.
     /// </param>
     public ProcessSupervisor(
-        ILoggerFactory   loggerFactory,
-        ProcessRunType   processRunType,
-        string           workingDirectory,
-        string           processPath,
-        string           arguments            = null,
-        StringDictionary environmentVariables = null,
-        bool             captureStdErr        = false)
+        ProcessSupervisorSettings settings,
+        ILoggerFactory            loggerFactory)
     {
-        _loggerFactory        = loggerFactory;
-        _workingDirectory     = workingDirectory;
-        _processPath          = processPath;
-        _arguments            = arguments ?? string.Empty;
-        _environmentVariables = environmentVariables;
-        _captureStdErr        = captureStdErr;
+        _settings        = settings;
+        _loggerFactory   = loggerFactory;
 
-        _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{processPath}");
+        _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{settings.ProcessPath}");
 
         _processStateMachine
             .Configure(State.NotStarted)
@@ -105,21 +122,21 @@ public class ProcessSupervisor : IDisposable
             .PermitIf(
                 Trigger.ProcessExit,
                 State.ExitedSuccessfully,
-                () => processRunType == ProcessRunType.SelfTerminating
+                () => settings.ProcessRunType == ProcessRunType.SelfTerminating
                       && _process.HasExited
                       && _process.ExitCode == 0,
                 "SelfTerminating && ExitCode==0")
             .PermitIf(
                 Trigger.ProcessExit,
                 State.ExitedWithError,
-                () => processRunType == ProcessRunType.SelfTerminating 
+                () => settings.ProcessRunType == ProcessRunType.SelfTerminating 
                       && _process.HasExited 
                       && _process.ExitCode != 0,
                 "SelfTerminating && ExitCode!=0")
             .PermitIf(
                 Trigger.ProcessExit,
                 State.ExitedUnexpectedly,
-                () => processRunType == ProcessRunType.NonTerminating 
+                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
                       && _process.HasExited,
                 "NonTerminating and died.")
             .Permit(Trigger.Stop, State.Stopping)
@@ -133,19 +150,19 @@ public class ProcessSupervisor : IDisposable
             .Configure(State.Stopping)
             .OnEntryFromAsync(_stopTrigger, OnStop)
             .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
-                () => processRunType == ProcessRunType.NonTerminating 
+                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
                       && !_killed 
                       && _process.HasExited
                       && _process.ExitCode == 0,
                 "NonTerminating and shut down cleanly")
             .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
-                () => processRunType == ProcessRunType.NonTerminating
+                () => settings.ProcessRunType == ProcessRunType.NonTerminating
                       && !_killed
                       && _process.HasExited
                       && _process.ExitCode != 0,
                 "NonTerminating and shut down with non-zero exit code")
             .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                () => processRunType == ProcessRunType.NonTerminating 
+                () => settings.ProcessRunType == ProcessRunType.NonTerminating 
                       && _killed
                       && _process.HasExited
                       && _process.ExitCode != 0,
@@ -183,7 +200,7 @@ public class ProcessSupervisor : IDisposable
     /// <summary>
     ///     Information about the launched process.
     /// </summary>
-    public IProcessInfo ProcessInfo { get; private set; }
+    public IProcessInfo? ProcessInfo { get; private set; }
 
     public State CurrentState => _processStateMachine.State;
 
@@ -249,13 +266,11 @@ public class ProcessSupervisor : IDisposable
             };
 
             // Copy over environment variables
-            if (_environmentVariables != null)
+            foreach (string key in _environmentVariables.Keys)
             {
-                foreach (string key in _environmentVariables.Keys)
-                {
-                    processStartInfo.EnvironmentVariables[key] = _environmentVariables[key];
-                }
+                processStartInfo.EnvironmentVariables[key] = _environmentVariables[key];
             }
+            
 
             // Start the process and capture it's output.
             _process = new Process

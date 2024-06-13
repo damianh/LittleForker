@@ -35,8 +35,8 @@ if (exitWithNonZero)
     Log.Logger.Information("Will exit with non-zero exit code");
 }
 
-var pid = Process.GetCurrentProcess().Id;
-Log.Logger.Information($"Long running process started. PID={pid}");
+var pid = Environment.ProcessId;
+logger.Information($"Long running process started. PID={pid}");
 
 var parentPid = configRoot.GetValue<int?>("ParentProcessId");
 

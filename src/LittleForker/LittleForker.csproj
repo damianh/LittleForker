@@ -8,7 +8,7 @@
     <PackageProjectUrl>https://github.com/damianh/LittleForker</PackageProjectUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>process-supervision, child-process</PackageTags>
-    <Description>A utility to assist with spawing child processes, monitor their lifecycle and co-operative shutdown.</Description>
+    <Description>A utility to assist with spawning child processes, monitor their lifecycle and co-operative shutdown.</Description>
     <!-- Source Link -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>

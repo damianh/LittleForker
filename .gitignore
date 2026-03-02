@@ -52,3 +52,4 @@ nCrunchTemp_*
 
 src/LittleForker.Tests/NonTerminatingProcess/
 src/LittleForker.Tests/SelfTerminatingProcess/
+nul

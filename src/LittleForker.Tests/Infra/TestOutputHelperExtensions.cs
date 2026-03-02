@@ -1,4 +1,5 @@
-﻿using Xunit.Abstractions;
+﻿using System;
+using Xunit.Abstractions;
 
 namespace LittleForker;
 
@@ -8,7 +9,15 @@ public static class TestOutputHelperExtensions
     {
         if (o != null)
         {
-            outputHelper.WriteLine(o.ToString());
+            try
+            {
+                outputHelper.WriteLine(o.ToString());
+            }
+            catch (InvalidOperationException)
+            {
+                // OutputDataReceived may fire after the test has completed,
+                // at which point the ITestOutputHelper is no longer active.
+            }
         }
     }
 }

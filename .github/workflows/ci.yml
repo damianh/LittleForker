@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Setup Dotnet
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x 7.0.x
+        dotnet-version: '10.0.x'
     - name: Print Env
       run: printenv
       shell: bash
@@ -42,7 +42,7 @@ jobs:
       continue-on-error: true
       run: dotnet nuget push artifacts/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_ORG_TOKEN}} --skip-duplicate
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: artifacts
         path: artifacts

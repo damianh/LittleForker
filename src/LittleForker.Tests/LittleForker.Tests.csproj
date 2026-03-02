@@ -2,21 +2,16 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
     <LangVersion>latest</LangVersion>
     <RootNamespace>LittleForker</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MartinCostello.Logging.XUnit" Version="0.7.1" />
+    <PackageReference Include="MartinCostello.Logging.XUnit.v3" Version="0.7.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
-    <PackageReference Include="xunit.core" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="XunitContext" Version="3.3.2" />
+    <PackageReference Include="xunit.v3.core.mtp-v2" Version="3.2.2" />
   </ItemGroup>
 
   <ItemGroup>

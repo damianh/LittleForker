@@ -7,14 +7,9 @@ using Xunit;
 
 namespace LittleForker;
 
-public class CooperativeShutdownTests
+public sealed class CooperativeShutdownTests
 {
-    private readonly ILoggerFactory _loggerFactory;
-
-    public CooperativeShutdownTests(ITestOutputHelper outputHelper)
-    {
-        _loggerFactory = new XunitLoggerFactory(outputHelper).LoggerFactory;
-    }
+    private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
     [Fact]
     public async Task When_server_signals_exit_then_should_notify_client_to_exit()

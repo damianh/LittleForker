@@ -6,16 +6,9 @@ using Xunit;
 
 namespace LittleForker;
 
-public class ProcessExitedHelperTests
+public sealed class ProcessExitedHelperTests
 {
-    private readonly ITestOutputHelper _outputHelper;
-    private readonly ILoggerFactory    _loggerFactory;
-
-    public ProcessExitedHelperTests(ITestOutputHelper outputHelper)
-    {
-        _outputHelper  = outputHelper;
-        _loggerFactory = new XunitLoggerFactory(outputHelper).LoggerFactory;
-    }
+    private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
     [Fact]
     public async Task When_parent_process_does_not_exist_then_should_call_parent_exited_callback()
@@ -39,7 +32,7 @@ public class ProcessExitedHelperTests
             "dotnet",
             "./NonTerminatingProcess/NonTerminatingProcess.dll");
         var parentIsRunning = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
-        supervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Parent Process: {data}");
+        supervisor.OutputDataReceived += data => Console.WriteLine($"Parent Process: {data}");
         await supervisor.Start();
         await parentIsRunning;
 
@@ -64,7 +57,7 @@ public class ProcessExitedHelperTests
             Environment.CurrentDirectory,
             "dotnet",
             "./NonTerminatingProcess/NonTerminatingProcess.dll");
-        parentSupervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Parent: {data}");
+        parentSupervisor.OutputDataReceived += data => Console.WriteLine($"Parent: {data}");
         var parentIsRunning = parentSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
         await parentSupervisor.Start();
         await parentIsRunning;
@@ -76,7 +69,7 @@ public class ProcessExitedHelperTests
             Environment.CurrentDirectory,
             "dotnet",
             $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo.Id}");
-        childSupervisor.OutputDataReceived += data => _outputHelper.WriteLine($"Child: {data}");
+        childSupervisor.OutputDataReceived += data => Console.WriteLine($"Child: {data}");
         var childIsRunning  = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
         var childHasStopped = childSupervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
         await childSupervisor.Start();

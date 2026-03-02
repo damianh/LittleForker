@@ -1,0 +1,90 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (x.y.z or x.y.z-prerelease.1)'
+        required: true
+        type: string
+      push_to_nuget:
+        description: 'Push to NuGet.org'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: nuget.org
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Validate version format
+      run: |
+        if ! echo "${{ inputs.version }}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+\.[0-9]+)?$'; then
+          echo "Invalid version format. Expected: x.y.z or x.y.z-prerelease.1"
+          exit 1
+        fi
+    
+    - name: Remove existing tag if present
+      run: |
+        TAG="v${{ inputs.version }}"
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "Tag $TAG exists, removing it"
+          git tag -d "$TAG"
+          git push origin ":refs/tags/$TAG" || true
+        fi
+    
+    - name: Create and push tag
+      run: |
+        TAG="v${{ inputs.version }}"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a "$TAG" -m "Release ${{ inputs.version }}"
+        git push origin "$TAG"
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack NuGet package
+      run: dotnet pack src/LittleForker/LittleForker.csproj --configuration Release --no-build --output ./packages
+    
+    - name: Push to GitHub Packages
+      run: |
+        dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" || true
+        dotnet nuget push "./packages/*.nupkg" --source "github" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+    
+    - name: Push to NuGet.org
+      if: ${{ inputs.push_to_nuget }}
+      run: |
+        dotnet nuget push "./packages/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_ORG_APIKEY }} --skip-duplicate
+    
+    - name: Upload package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages-${{ inputs.version }}
+        path: ./packages/*.nupkg
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ inputs.version }}
+        name: Release ${{ inputs.version }}
+        draft: false
+        prerelease: ${{ contains(inputs.version, '-') }}
+        generate_release_notes: true

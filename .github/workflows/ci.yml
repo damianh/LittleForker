@@ -1,48 +1,42 @@
-name: CI
+name: ci
 
 on:
-  workflow_dispatch:
-  pull_request:
   push:
     branches:
-    - main
-    tags:
-    - v*
+      - main
+      - '**'
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Setup Dotnet
+    
+    - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
-    - name: Print Env
-      run: printenv
-      shell: bash
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
     - name: Build
-      run: |
-        dotnet build src/NonTerminatingProcess --configuration Release
-        dotnet build src/SelfTerminatingProcess --configuration Release
-    - name: Test
+      run: dotnet build --no-restore --configuration Release
+    
+    - name: Run tests
       timeout-minutes: 5
-      run: dotnet test src/LittleForker.Tests --configuration Release
-    - name: Pack
-      run: dotnet pack src/LittleForker --configuration Release --output artifacts
-    - name: Push to GitHub
-      if: github.event_name == 'push'
-      continue-on-error: true
-      run: dotnet nuget push artifacts/*.nupkg -s https://nuget.pkg.github.com/damianh/index.json -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate
-    - name: Push to Nuget.org (on tag)
-      if: startsWith(github.ref, 'refs/tags/v')
-      continue-on-error: true
-      run: dotnet nuget push artifacts/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_ORG_TOKEN}} --skip-duplicate
-    - name: Upload Artifacts
+      run: dotnet run --project src/LittleForker.Tests/LittleForker.Tests.csproj --no-build --configuration Release
+    
+    - name: Build NuGet package
+      run: dotnet pack src/LittleForker/LittleForker.csproj --no-build --configuration Release --output ./packages
+    
+    - name: Upload NuGet package
       uses: actions/upload-artifact@v4
       with:
-        name: artifacts
-        path: artifacts
+        name: nuget-packages
+        path: ./packages/*.nupkg

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/LittleForker.Tests/LittleForker.Tests.csproj" />
+  <Project Path="src/LittleForker/LittleForker.csproj" />
+  <Project Path="src/NonTerminatingProcess/NonTerminatingProcess.csproj" />
+  <Project Path="src/SelfTerminatingProcess/SelfTerminatingProcess.csproj" />
+</Solution>

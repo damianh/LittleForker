@@ -67,11 +67,10 @@ internal class TaskQueue : IDisposable
     /// <returns>A task representing the operation. Awaiting is optional.</returns>
     public Task<TResult> Enqueue<TResult>(Func<CancellationToken, Task<TResult>> function)
     {
-        return EnqueueInternal(_taskQueue, function);
+        return EnqueueInternal(function);
     }
 
     private Task<TResult> EnqueueInternal<TResult>(
-        ConcurrentQueue<Func<Task>>            taskQueue,
         Func<CancellationToken, Task<TResult>> function)
     {
         var tcs = new TaskCompletionSource<TResult>();
@@ -80,7 +79,7 @@ internal class TaskQueue : IDisposable
             tcs.SetCanceled();
             return tcs.Task;
         }
-        taskQueue.Enqueue(async () =>
+        _taskQueue.Enqueue(async () =>
         {
             if (_isDisposed.IsCancellationRequested)
             {
@@ -113,14 +112,23 @@ internal class TaskQueue : IDisposable
 
     private async Task ProcessTaskQueue()
     {
-        do
+        while (true)
         {
-            if (_taskQueue.TryDequeue(out Func<Task> function))
+            while (_taskQueue.TryDequeue(out var function))
             {
                 await function().ConfigureAwait(false);
             }
+
+            // Queue appears empty — clear the processing flag.
             _isProcessing.Set(false);
-        } while (_taskQueue.Count > 0 && _isProcessing.CompareExchange(true, false) == false);
+
+            // Double-check: if items were enqueued between TryDequeue returning
+            // empty and Set(false), re-acquire processing ownership and loop again.
+            if (_taskQueue.IsEmpty || _isProcessing.CompareExchange(true, false) != false)
+            {
+                break;
+            }
+        }
     }
 
     public void Dispose()

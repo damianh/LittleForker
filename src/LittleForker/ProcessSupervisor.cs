@@ -9,7 +9,7 @@ using Stateless.Graph;
 namespace LittleForker;
 
 /// <summary>
-///     Launches an process and tracks it's lifecycle .
+///     Launches a process and tracks its lifecycle.
 /// </summary>
 public class ProcessSupervisor : IDisposable
 {
@@ -24,7 +24,7 @@ public class ProcessSupervisor : IDisposable
     private readonly string         _workingDirectory;
     private          Process        _process;
     private readonly ILoggerFactory _loggerFactory;
-    private          bool           _killed;
+    private readonly InterlockedBoolean _killed = new();
     private readonly TaskQueue      _taskQueue = new();
 
     /// <summary>
@@ -134,22 +134,46 @@ public class ProcessSupervisor : IDisposable
             .OnEntryFromAsync(_stopTrigger, OnStop)
             .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
                 () => processRunType == ProcessRunType.NonTerminating 
-                      && !_killed 
+                      && !_killed.Value 
                       && _process.HasExited
                       && _process.ExitCode == 0,
                 "NonTerminating and shut down cleanly")
             .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
                 () => processRunType == ProcessRunType.NonTerminating
-                      && !_killed
+                      && !_killed.Value
                       && _process.HasExited
                       && _process.ExitCode != 0,
                 "NonTerminating and shut down with non-zero exit code")
             .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
                 () => processRunType == ProcessRunType.NonTerminating 
-                      && _killed
+                      && _killed.Value
                       && _process.HasExited
                       && _process.ExitCode != 0,
-                "NonTerminating and killed.");
+                "NonTerminating and killed.")
+            .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
+                () => processRunType == ProcessRunType.SelfTerminating
+                      && !_killed.Value
+                      && _process.HasExited
+                      && _process.ExitCode == 0,
+                "SelfTerminating and shut down cleanly")
+            .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
+                () => processRunType == ProcessRunType.SelfTerminating
+                      && !_killed.Value
+                      && _process.HasExited
+                      && _process.ExitCode != 0,
+                "SelfTerminating and shut down with non-zero exit code")
+            .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
+                () => processRunType == ProcessRunType.SelfTerminating
+                      && _killed.Value
+                      && _process.HasExited
+                      && _process.ExitCode != 0,
+                "SelfTerminating and killed with non-zero exit code")
+            .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
+                () => processRunType == ProcessRunType.SelfTerminating
+                      && _killed.Value
+                      && _process.HasExited
+                      && _process.ExitCode == 0,
+                "SelfTerminating and killed but exited cleanly");
 
         _processStateMachine
             .Configure(State.StartFailed)
@@ -167,9 +191,13 @@ public class ProcessSupervisor : IDisposable
             .Configure(State.ExitedKilled)
             .Permit(Trigger.Start, State.Running);
 
+        _processStateMachine
+            .Configure(State.ExitedWithError)
+            .Permit(Trigger.Start, State.Running);
+
         _processStateMachine.OnTransitioned(transition =>
         {
-            _logger.LogInformation($"State transition from {transition.Source} to {transition.Destination}");
+            _logger.LogInformation("State transition from {Source} to {Destination}", transition.Source, transition.Destination);
             StateChanged?.Invoke(transition.Destination);
         });
     }
@@ -210,7 +238,7 @@ public class ProcessSupervisor : IDisposable
     public Task Start() 
         => _taskQueue.Enqueue(() =>
         {
-            _killed = false;
+            _killed.Set(false);
             _processStateMachine.Fire(Trigger.Start);
         });
 
@@ -286,7 +314,7 @@ public class ProcessSupervisor : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Failed to start process {_processPath}");
+            _logger.LogError(ex, "Failed to start process {ProcessPath}", _processPath);
             _processStateMachine.Fire(_startErrorTrigger, ex);
         }
     }
@@ -304,16 +332,17 @@ public class ProcessSupervisor : IDisposable
         {
             try
             {
-                _logger.LogInformation($"Killing process {_process.Id}");
-                _killed = true;
+                _logger.LogInformation("Killing process {ProcessId}", _process.Id);
+                _killed.Set(true);
                 _process.Kill();
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
                     ex,
-                    $"Exception occurred attempting to kill process {_process.Id}. This may if the " +
-                    "in the a race condition where process has already exited and an attempt to kill it.");
+                    "Exception occurred attempting to kill process {ProcessId}. This may occur if there is "
+                    + "a race condition where process has already exited and an attempt to kill it.",
+                    _process.Id);
             }
         }
         else
@@ -325,16 +354,30 @@ public class ProcessSupervisor : IDisposable
                 // process acknowledging that it has received an EXIT signal
                 // only means the process has _started_ to shut down.
 
+                var sw = Stopwatch.StartNew();
+
                 var exited          = this.WhenStateIs(State.ExitedSuccessfully);
                 var exitedWithError = this.WhenStateIs(State.ExitedWithError);
 
-                await CooperativeShutdown
-                    .SignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value)
+                var signaled = await CooperativeShutdown
+                    .TrySignalExit(ProcessInfo.Id, _loggerFactory).TimeoutAfter(timeout.Value)
                     .ConfigureAwait(false);
+
+                if (!signaled)
+                {
+                    // Signal failed — skip waiting and go straight to kill.
+                    throw new TimeoutException("Cooperative shutdown signal failed.");
+                }
+
+                var remaining = timeout.Value - sw.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    throw new TimeoutException("Timeout budget exhausted after signaling exit.");
+                }
 
                 await Task
                     .WhenAny(exited, exitedWithError)
-                    .TimeoutAfter(timeout.Value)
+                    .TimeoutAfter(remaining)
                     .ConfigureAwait(false);
             }
             catch (TimeoutException)
@@ -346,19 +389,23 @@ public class ProcessSupervisor : IDisposable
                 try
                 {
                     _logger.LogWarning(
-                        $"Timed out waiting to signal the process to exit or the "             +
-                        $"process {_process.ProcessName} ({_process.Id}) did not shutdown in " +
-                        $"the given time ({timeout})");
-                    _killed = true;
+                        "Timed out waiting to signal the process to exit or the "
+                        + "process {ProcessPath} ({ProcessId}) did not shutdown in "
+                        + "the given time ({Timeout})",
+                        _processPath,
+                        _process.Id,
+                        timeout);
+                    _killed.Set(true);
                     _process.Kill();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(
                         ex,
-                        $"Exception occurred attempting to kill process {_process.Id}. This may occur "         +
-                        "in the a race condition where the process has exited, a timeout waiting for the exit," +
-                        "and the attempt to kill it.");
+                        "Exception occurred attempting to kill process {ProcessId}. This may occur "
+                        + "in a race condition where the process has exited, a timeout waiting for the exit, "
+                        + "and the attempt to kill it.",
+                        _process.Id);
                 }
             }
         }
@@ -366,7 +413,7 @@ public class ProcessSupervisor : IDisposable
 
     public void Dispose()
     {
-        _process?.Dispose();
         _taskQueue?.Dispose();
+        _process?.Dispose();
     }
 }

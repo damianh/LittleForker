@@ -22,6 +22,14 @@ public static class CooperativeShutdown
     public static string GetPipeName(int processId) => $"LittleForker-{processId}";
 
     /// <summary>
+    ///     The pipe name a process will listen on for a EXIT signal, including a security nonce.
+    /// </summary>
+    /// <param name="processId">The process ID process listening.</param>
+    /// <param name="nonce">A shared secret nonce known to both parent and child.</param>
+    /// <returns>A generated pipe name that includes the nonce.</returns>
+    public static string GetPipeName(int processId, string nonce) => $"LittleForker-{processId}-{nonce}";
+
+    /// <summary>
     ///     Creates a listener for cooperative shutdown.
     /// </summary>
     /// <param name="shutdownRequested">
@@ -37,8 +45,43 @@ public static class CooperativeShutdown
     /// </returns>
     public static Task<IDisposable> Listen(Action shutdownRequested, ILoggerFactory loggerFactory, Action<Exception> onError = default)
     {
+        return Listen(shutdownRequested, loggerFactory, nonce: null, onError: onError);
+    }
+
+    /// <summary>
+    ///     Creates a listener for cooperative shutdown with an optional security nonce.
+    /// </summary>
+    /// <param name="shutdownRequested">
+    ///     The callback that is invoked when cooperative shutdown has been
+    ///     requested.
+    /// </param>
+    /// <param name="loggerFactory">
+    ///     A logger factory.
+    /// </param>
+    /// <param name="nonce">
+    ///     An optional security nonce shared between parent and child process.
+    ///     When provided, the pipe name includes the nonce, preventing other local
+    ///     processes from sending EXIT signals.
+    /// </param>
+    /// <param name="onError">A method to be called if an error occurs while listening</param>
+    /// <returns>
+    ///     A disposable representing the named pipe listener. The pipe server is started
+    ///     on a background thread and may not be ready for connections immediately after
+    ///     this method returns.
+    /// </returns>
+    public static Task<IDisposable> Listen(
+        Action shutdownRequested,
+        ILoggerFactory loggerFactory,
+        string nonce,
+        Action<Exception> onError = default)
+    {
+        var processId = Process.GetCurrentProcess().Id;
+        var pipeName = nonce != null
+            ? GetPipeName(processId, nonce)
+            : GetPipeName(processId);
+
         var listener = new CooperativeShutdownListener(
-            GetPipeName(Process.GetCurrentProcess().Id),
+            pipeName,
             shutdownRequested,
             loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}"));
             
@@ -47,6 +90,10 @@ public static class CooperativeShutdown
             try
             {
                 await listener.Listen().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal disposal — not an error.
             }
             catch (Exception ex)
             {
@@ -63,11 +110,49 @@ public static class CooperativeShutdown
     /// <param name="processId">The process ID to signal too.</param>
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns>A task representing the operation.</returns>
-    // TODO Should exceptions rethrow or should we let the caller that the signalling failed i.e. Task<book>?
     public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
     {
-        var logger   = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
-        var pipeName = GetPipeName(processId);
+        await TrySignalExit(processId, loggerFactory).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Signals to a process to shut down using a security nonce.
+    /// </summary>
+    /// <param name="processId">The process ID to signal too.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    /// <param name="nonce">The security nonce shared between parent and child process.</param>
+    /// <returns>A task representing the operation.</returns>
+    public static async Task SignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
+    {
+        await TrySignalExit(processId, loggerFactory, nonce).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Signals to a process to shut down, returning whether the signal was delivered.
+    /// </summary>
+    /// <param name="processId">The process ID to signal too.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
+    internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory)
+    {
+        return TrySignalExitCore(processId, loggerFactory, GetPipeName(processId));
+    }
+
+    /// <summary>
+    ///     Signals to a process to shut down using a security nonce, returning whether the signal was delivered.
+    /// </summary>
+    /// <param name="processId">The process ID to signal too.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    /// <param name="nonce">The security nonce shared between parent and child process.</param>
+    /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
+    internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
+    {
+        return TrySignalExitCore(processId, loggerFactory, GetPipeName(processId, nonce));
+    }
+
+    private static async Task<bool> TrySignalExitCore(int processId, ILoggerFactory loggerFactory, string pipeName)
+    {
+        var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
         using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
         {
             try
@@ -75,21 +160,25 @@ public static class CooperativeShutdown
                 await pipe.ConnectAsync((int)TimeSpan.FromSeconds(3).TotalMilliseconds).ConfigureAwait(false);
                 var streamWriter = new StreamWriter(pipe);
                 var streamReader = new StreamReader(pipe, true);
-                logger.LogInformation($"Signalling EXIT to client on pipe {pipeName}...");
+                logger.LogInformation("Signalling EXIT to client on pipe {PipeName}...", pipeName);
                 await SignalExit(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
-                logger.LogInformation($"Signalling EXIT to client on pipe {pipeName} successful.");
+                logger.LogInformation("Signalling EXIT to client on pipe {PipeName} successful.", pipeName);
+                return true;
             }
             catch (IOException ex)
             {
-                logger.LogError(ex, $"Failed to signal EXIT to client on pipe {pipeName}.");
+                logger.LogError(ex, "Failed to signal EXIT to client on pipe {PipeName}.", pipeName);
+                return false;
             }
             catch (TimeoutException ex)
             {
-                logger.LogError(ex, $"Timeout signalling EXIT on pipe {pipeName}.");
+                logger.LogError(ex, "Timeout signalling EXIT on pipe {PipeName}.", pipeName);
+                return false;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Failed to signal EXIT to client on pipe {pipeName}.");
+                logger.LogError(ex, "Failed to signal EXIT to client on pipe {PipeName}.", pipeName);
+                return false;
             }
         }
     }
@@ -126,20 +215,20 @@ public static class CooperativeShutdown
                 // message transmission mode is not supported on Unix
                 var pipe = new NamedPipeServerStream(_pipeName,
                     PipeDirection.InOut,
-                    NamedPipeServerStream.MaxAllowedServerInstances,
+                    1,
                     PipeTransmissionMode.Byte,
                     PipeOptions.None);
 
-                _logger.LogInformation($"Listening on pipe '{_pipeName}'.");
-
-                await pipe
-                    .WaitForConnectionAsync(_stopListening.Token)
-                    .ConfigureAwait(false);
-
-                _logger.LogInformation($"Client connected to pipe '{_pipeName}'.");
-
                 try
                 {
+                    _logger.LogInformation("Listening on pipe '{PipeName}'.", _pipeName);
+
+                    await pipe
+                        .WaitForConnectionAsync(_stopListening.Token)
+                        .ConfigureAwait(false);
+
+                    _logger.LogInformation("Client connected to pipe '{PipeName}'.", _pipeName);
+
                     using (var reader = new StreamReader(pipe))
                     {
                         using (var writer = new StreamWriter(pipe) { AutoFlush = true })
@@ -149,7 +238,7 @@ public static class CooperativeShutdown
                                 // a pipe can get disconnected after OS pipes enumeration as well
                                 if (!pipe.IsConnected)
                                 {
-                                    _logger.LogDebug($"Pipe {_pipeName} connection is broken re-connecting");
+                                    _logger.LogDebug("Pipe {PipeName} connection is broken re-connecting", _pipeName);
                                     break;
                                 }
 
@@ -161,7 +250,7 @@ public static class CooperativeShutdown
                                     continue;
                                 }
 
-                                _logger.LogInformation($"Received command from server: {s}");
+                                _logger.LogInformation("Received command from server: {Command}", s);
 
                                 await writer.WriteLineAsync("OK").ConfigureAwait(false);
                                 _logger.LogInformation("Responded with OK");
@@ -174,10 +263,19 @@ public static class CooperativeShutdown
                         }
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    // Normal disposal path — break cleanly without re-throwing.
+                    break;
+                }
                 catch (IOException ex)
                 {
                     // As the pipe connection should be restored this exception should not be considered as terminating
                     _logger.LogDebug(ex, "Pipe connection failed");
+                }
+                finally
+                {
+                    await pipe.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }

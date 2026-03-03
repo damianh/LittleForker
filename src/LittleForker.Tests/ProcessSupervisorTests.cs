@@ -200,6 +200,80 @@ public sealed class ProcessSupervisorTests
     }
 
     [Fact]
+    public async Task Can_restart_a_process_that_exited_with_error()
+    {
+        var supervisor = new ProcessSupervisor(
+            _loggerFactory,
+            ProcessRunType.NonTerminating,
+            Environment.CurrentDirectory,
+            "dotnet",
+            "./NonTerminatingProcess/NonTerminatingProcess.dll --exit-with-non-zero=true");
+        supervisor.OutputDataReceived += data => Console.WriteLine($"Process: {data}");
+
+        // First run — stop cooperatively; process exits with non-zero code.
+        var exitedWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
+        await supervisor.Start();
+        await supervisor.Stop(TimeSpan.FromSeconds(5));
+        await exitedWithError.TimeoutAfter(TimeSpan.FromSeconds(5));
+        supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedWithError);
+        supervisor.ProcessInfo.ExitCode.ShouldNotBe(0);
+
+        // Restart from ExitedWithError — should transition back to Running and exit again.
+        var exitedWithError2 = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
+        await supervisor.Start();
+        await supervisor.Stop(TimeSpan.FromSeconds(5));
+        await exitedWithError2.TimeoutAfter(TimeSpan.FromSeconds(5));
+        supervisor.CurrentState.ShouldBe(ProcessSupervisor.State.ExitedWithError);
+    }
+
+    [Fact]
+    public async Task When_stop_a_self_terminating_process_then_should_exit()
+    {
+        var supervisor = new ProcessSupervisor(
+            _loggerFactory,
+            ProcessRunType.SelfTerminating,
+            Environment.CurrentDirectory,
+            "dotnet",
+            "./NonTerminatingProcess/NonTerminatingProcess.dll");
+        supervisor.OutputDataReceived += data => Console.WriteLine($"Process: {data}");
+
+        var exitedSuccessfully = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+        var exitedKilled = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedKilled);
+        await supervisor.Start();
+        await supervisor.Stop(TimeSpan.FromSeconds(5));
+
+        // Should reach an exit state without an InvalidOperationException from Stateless.
+        var completed = await Task.WhenAny(exitedSuccessfully, exitedKilled).TimeoutAfter(TimeSpan.FromSeconds(10));
+        var finalState = supervisor.CurrentState;
+        (finalState == ProcessSupervisor.State.ExitedSuccessfully
+            || finalState == ProcessSupervisor.State.ExitedKilled)
+            .ShouldBeTrue($"Expected ExitedSuccessfully or ExitedKilled, got {finalState}");
+    }
+
+    [Fact]
+    public async Task WhenStateIs_already_in_state_completes_immediately()
+    {
+        // Initial state is NotStarted — WhenStateIs(NotStarted) should complete immediately.
+        var supervisor = new ProcessSupervisor(
+            _loggerFactory,
+            ProcessRunType.SelfTerminating,
+            Environment.CurrentDirectory,
+            "dotnet",
+            "./SelfTerminatingProcess/SelfTerminatingProcess.dll");
+
+        var task = supervisor.WhenStateIs(ProcessSupervisor.State.NotStarted);
+        task.IsCompleted.ShouldBeTrue("WhenStateIs should complete immediately when already in target state");
+
+        // Also verify after a state transition.
+        var exited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+        await supervisor.Start();
+        await exited.TimeoutAfter(TimeSpan.FromSeconds(5));
+
+        var task2 = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+        task2.IsCompleted.ShouldBeTrue("WhenStateIs should complete immediately for ExitedSuccessfully");
+    }
+
+    [Fact]
     public void WriteDotGraph()
     {
         var processController = new ProcessSupervisor(

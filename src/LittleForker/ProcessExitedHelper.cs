@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -37,20 +36,24 @@ public sealed class ProcessExitedHelper : IDisposable
         ProcessId = processId;
         var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessExitedHelper)}");
 
-        _process = Process.GetProcesses().SingleOrDefault(pr => pr.Id == processId);
-        if (_process == null)
+        try
         {
-            logger.LogError($"Process with Id {processId} was not found.");
+            _process = Process.GetProcessById(processId);
+        }
+        catch (ArgumentException)
+        {
+            logger.LogError("Process with Id {ProcessId} was not found.", processId);
             OnProcessExit();
             return;
         }
-        logger.LogInformation($"Process with Id {processId} found.");
+
+        logger.LogInformation("Process with Id {ProcessId} found.", processId);
         try
         {
             _process.EnableRaisingEvents = true;
             _process.Exited += (_, __) =>
             {
-                logger.LogInformation($"Parent process with Id {processId} exited.");
+                logger.LogInformation("Parent process with Id {ProcessId} exited.", processId);
                 OnProcessExit();
             };
         }
@@ -58,13 +61,13 @@ public sealed class ProcessExitedHelper : IDisposable
         // attaching to the Exited event
         catch (InvalidOperationException ex) 
         {
-            logger.LogInformation($"Process with Id {processId} has already exited.", ex);
+            logger.LogInformation(ex, "Process with Id {ProcessId} has already exited.", processId);
             OnProcessExit();
         }
 
         if (_process.HasExited)
         {
-            logger.LogInformation($"Process with Id {processId} has already exited.");
+            logger.LogInformation("Process with Id {ProcessId} has already exited.", processId);
             OnProcessExit();
         }
 

@@ -16,9 +16,8 @@ public sealed class CooperativeShutdownHostedServiceOptions
 
     /// <summary>
     ///     An optional security nonce shared between parent and child process.
-    ///     When provided together with a <c>null</c> <see cref="PipeName"/>,
-    ///     the pipe name includes the nonce, preventing other local processes
-    ///     from sending EXIT signals.
+    ///     When provided, the listener validates the nonce in the wire protocol
+    ///     (e.g. <c>EXIT {nonce}</c>) before accepting an EXIT command.
     /// </summary>
     public string? Nonce { get; set; }
 }

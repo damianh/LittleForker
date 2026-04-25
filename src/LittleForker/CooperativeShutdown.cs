@@ -21,14 +21,6 @@ public static class CooperativeShutdown
     public static string GetPipeName(int processId) => $"LittleForker-{processId}";
 
     /// <summary>
-    ///     The pipe name a process will listen on for a EXIT signal, including a security nonce.
-    /// </summary>
-    /// <param name="processId">The process ID process listening.</param>
-    /// <param name="nonce">A shared secret nonce known to both parent and child.</param>
-    /// <returns>A generated pipe name that includes the nonce.</returns>
-    public static string GetPipeName(int processId, string nonce) => $"LittleForker-{processId}-{nonce}";
-
-    /// <summary>
     ///     Creates a listener for cooperative shutdown.
     /// </summary>
     /// <param name="shutdownRequested">
@@ -57,8 +49,8 @@ public static class CooperativeShutdown
     /// </param>
     /// <param name="nonce">
     ///     An optional security nonce shared between parent and child process.
-    ///     When provided, the pipe name includes the nonce, preventing other local
-    ///     processes from sending EXIT signals.
+    ///     When provided, the listener validates the nonce in the wire protocol
+    ///     before accepting an EXIT command.
     /// </param>
     /// <param name="onError">A method to be called if an error occurs while listening</param>
     /// <returns>
@@ -73,12 +65,11 @@ public static class CooperativeShutdown
         Action<Exception>? onError = default)
     {
         var processId = Process.GetCurrentProcess().Id;
-        var pipeName = nonce != null
-            ? GetPipeName(processId, nonce)
-            : GetPipeName(processId);
+        var pipeName = GetPipeName(processId);
 
         var listener = new CooperativeShutdownListener(
             pipeName,
+            nonce,
             shutdownRequested,
             loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}"));
 
@@ -136,7 +127,7 @@ public static class CooperativeShutdown
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory)
-        => TrySignalExitCore(loggerFactory, GetPipeName(processId));
+        => TrySignalExitCore(loggerFactory, GetPipeName(processId), nonce: null);
 
     /// <summary>
     ///     Signals to a process to shut down using a security nonce, returning whether the signal was delivered.
@@ -146,7 +137,7 @@ public static class CooperativeShutdown
     /// <param name="nonce">The security nonce shared between parent and child process.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
-        => TrySignalExitCore(loggerFactory, GetPipeName(processId, nonce));
+        => TrySignalExitCore(loggerFactory, GetPipeName(processId), nonce);
 
     /// <summary>
     ///     Signals to a process to shut down using an explicit pipe name, returning whether the signal was delivered.
@@ -155,9 +146,55 @@ public static class CooperativeShutdown
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(string pipeName, ILoggerFactory loggerFactory)
-        => TrySignalExitCore(loggerFactory, pipeName);
+        => TrySignalExitCore(loggerFactory, pipeName, nonce: null);
 
-    private static async Task<bool> TrySignalExitCore(ILoggerFactory loggerFactory, string pipeName)
+    /// <summary>
+    ///     Creates a <see cref="NamedPipeServerStream"/> restricted to the current user on Windows.
+    ///     On non-Windows platforms, standard filesystem permissions apply.
+    /// </summary>
+    internal static NamedPipeServerStream CreateSecurePipeServer(string pipeName)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var security = new PipeSecurity();
+            security.AddAccessRule(new PipeAccessRule(
+                System.Security.Principal.WindowsIdentity.GetCurrent().User!,
+                PipeAccessRights.FullControl,
+                System.Security.AccessControl.AccessControlType.Allow));
+            return NamedPipeServerStreamAcl.Create(
+                pipeName,
+                PipeDirection.InOut,
+                1,
+                PipeTransmissionMode.Byte,
+                PipeOptions.None,
+                0, 0, security);
+        }
+
+        return new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None);
+    }
+
+    /// <summary>
+    ///     Validates a received command against an optional nonce.
+    ///     Returns <c>true</c> if the command is a valid EXIT signal.
+    /// </summary>
+    internal static bool IsValidExitCommand(string? command, string? expectedNonce)
+    {
+        if (command is null)
+        {
+            return false;
+        }
+
+        if (expectedNonce is null)
+        {
+            // No nonce configured — accept "EXIT" or "EXIT {anything}".
+            return command == "EXIT" || command.StartsWith("EXIT ", StringComparison.Ordinal);
+        }
+
+        // Nonce configured — require exact match of "EXIT {nonce}".
+        return command == $"EXIT {expectedNonce}";
+    }
+
+    private static async Task<bool> TrySignalExitCore(ILoggerFactory loggerFactory, string pipeName, string? nonce)
     {
         var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
         using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
@@ -168,7 +205,7 @@ public static class CooperativeShutdown
                 var streamWriter = new StreamWriter(pipe);
                 var streamReader = new StreamReader(pipe, true);
                 logger.LogInformation("Signalling EXIT to client on pipe {PipeName}...", pipeName);
-                await SignalExitCore(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                await SignalExitCore(streamWriter, streamReader, nonce).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
                 logger.LogInformation("Signalling EXIT to client on pipe {PipeName} successful.", pipeName);
                 return true;
             }
@@ -190,9 +227,10 @@ public static class CooperativeShutdown
         }
     }
 
-    private static async Task SignalExitCore(TextWriter streamWriter, TextReader streamReader)
+    private static async Task SignalExitCore(TextWriter streamWriter, TextReader streamReader, string? nonce)
     {
-        await streamWriter.WriteLineAsync("EXIT").ConfigureAwait(false);
+        var message = nonce is not null ? $"EXIT {nonce}" : "EXIT";
+        await streamWriter.WriteLineAsync(message).ConfigureAwait(false);
         await streamWriter.FlushAsync().ConfigureAwait(false);
         await streamReader.ReadLineAsync().TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false); // Reads an 'OK'.
     }
@@ -200,16 +238,19 @@ public static class CooperativeShutdown
     private sealed class CooperativeShutdownListener : IDisposable
     {
         private readonly string _pipeName;
+        private readonly string? _nonce;
         private readonly Action _shutdownRequested;
         private readonly ILogger _logger;
         private readonly CancellationTokenSource _stopListening;
 
         internal CooperativeShutdownListener(
             string pipeName,
+            string? nonce,
             Action shutdownRequested,
             ILogger logger)
         {
             _pipeName = pipeName;
+            _nonce = nonce;
             _shutdownRequested = shutdownRequested;
             _logger = logger;
             _stopListening = new CancellationTokenSource();
@@ -219,12 +260,7 @@ public static class CooperativeShutdown
         {
             while (!_stopListening.IsCancellationRequested)
             {
-                // message transmission mode is not supported on Unix
-                var pipe = new NamedPipeServerStream(_pipeName,
-                    PipeDirection.InOut,
-                    1,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.None);
+                var pipe = CreateSecurePipeServer(_pipeName);
 
                 try
                 {
@@ -252,8 +288,9 @@ public static class CooperativeShutdown
                                 var s = await reader.ReadLineAsync().WithCancellation(_stopListening.Token)
                                     .ConfigureAwait(false);
 
-                                if (s != "EXIT")
+                                if (!IsValidExitCommand(s, _nonce))
                                 {
+                                    _logger.LogDebug("Received invalid or unrecognized command on pipe '{PipeName}': {Command}", _pipeName, s);
                                     continue;
                                 }
 

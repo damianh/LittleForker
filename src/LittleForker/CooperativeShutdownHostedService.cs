@@ -1,7 +1,6 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
-using System.IO.Pipes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,13 +39,7 @@ public sealed class CooperativeShutdownHostedService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            // message transmission mode is not supported on Unix
-            var pipe = new NamedPipeServerStream(
-                pipeName,
-                PipeDirection.InOut,
-                NamedPipeServerStream.MaxAllowedServerInstances,
-                PipeTransmissionMode.Byte,
-                PipeOptions.None);
+            var pipe = CooperativeShutdown.CreateSecurePipeServer(pipeName);
 
             try
             {
@@ -72,8 +65,9 @@ public sealed class CooperativeShutdownHostedService : BackgroundService
                         .WaitAsync(stoppingToken)
                         .ConfigureAwait(false);
 
-                    if (command != "EXIT")
+                    if (!CooperativeShutdown.IsValidExitCommand(command, _options.Nonce))
                     {
+                        _logger.LogDebug("Received invalid or unrecognized command on pipe '{PipeName}': {Command}", pipeName, command);
                         continue;
                     }
 
@@ -110,8 +104,6 @@ public sealed class CooperativeShutdownHostedService : BackgroundService
         }
 
         var pid = Environment.ProcessId;
-        return _options.Nonce != null
-            ? CooperativeShutdown.GetPipeName(pid, _options.Nonce)
-            : CooperativeShutdown.GetPipeName(pid);
+        return CooperativeShutdown.GetPipeName(pid);
     }
 }

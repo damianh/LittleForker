@@ -1,6 +1,7 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Collections.Specialized;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
@@ -40,7 +41,7 @@ public sealed class ProcessSupervisorTests
     [Fact]
     public async Task Given_short_running_exe_then_should_run_to_exit()
     {
-        var envVars = new StringDictionary {{"a", "b"}};
+        var envVars = new StringDictionary { { "a", "b" } };
         var supervisor = new ProcessSupervisor(
             _loggerFactory,
             ProcessRunType.SelfTerminating,
@@ -49,7 +50,7 @@ public sealed class ProcessSupervisorTests
             "./SelfTerminatingProcess/SelfTerminatingProcess.dll",
             envVars);
         supervisor.OutputDataReceived += data => Console.WriteLine(data);
-        var whenStateIsExited          = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
+        var whenStateIsExited = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
         var whenStateIsExitedWithError = supervisor.WhenStateIs(ProcessSupervisor.State.ExitedWithError);
 
         await supervisor.Start();
@@ -84,7 +85,7 @@ public sealed class ProcessSupervisorTests
         supervisor.OnStartException.ShouldBeNull();
         supervisor.ProcessInfo.ExitCode.ShouldBe(0);
     }
-        
+
     [Fact]
     public async Task Can_restart_a_stopped_short_running_process()
     {
@@ -142,7 +143,7 @@ public sealed class ProcessSupervisorTests
 
         Console.WriteLine($"Exit code {supervisor.ProcessInfo.ExitCode}");
     }
-        
+
     [Fact]
     public async Task When_stop_a_non_terminating_process_that_does_not_shutdown_within_timeout_then_should_exit_killed()
     {
@@ -277,8 +278,8 @@ public sealed class ProcessSupervisorTests
     public void WriteDotGraph()
     {
         var processController = new ProcessSupervisor(
-            _loggerFactory, 
-            ProcessRunType.NonTerminating, 
+            _loggerFactory,
+            ProcessRunType.NonTerminating,
             Environment.CurrentDirectory,
             "invalid.exe");
         Console.WriteLine(processController.GetDotGraph());

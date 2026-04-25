@@ -1,7 +1,7 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace LittleForker;
 
@@ -9,11 +9,11 @@ namespace LittleForker;
 ///     Represents a queue of tasks where a task is processed one at a time. When disposed
 ///     the outstanding tasks are cancelled.
 /// </summary>
-internal class TaskQueue : IDisposable
+internal sealed class TaskQueue : IDisposable
 {
-    private readonly ConcurrentQueue<Func<Task>> _taskQueue    = new();
-    private readonly CancellationTokenSource     _isDisposed   = new();
-    private readonly InterlockedBoolean          _isProcessing = new();
+    private readonly ConcurrentQueue<Func<Task>> _taskQueue = new();
+    private readonly CancellationTokenSource _isDisposed = new();
+    private readonly InterlockedBoolean _isProcessing = new();
 
     /// <summary>
     ///     Enqueues a task for processing.
@@ -66,9 +66,7 @@ internal class TaskQueue : IDisposable
     /// <param name="function">The operation to invoke that is cooperatively  cancelable.</param>
     /// <returns>A task representing the operation. Awaiting is optional.</returns>
     public Task<TResult> Enqueue<TResult>(Func<CancellationToken, Task<TResult>> function)
-    {
-        return EnqueueInternal(function);
-    }
+        => EnqueueInternal(function);
 
     private Task<TResult> EnqueueInternal<TResult>(
         Func<CancellationToken, Task<TResult>> function)
@@ -101,7 +99,6 @@ internal class TaskQueue : IDisposable
             {
                 tcs.SetException(ex);
             }
-
         });
         if (_isProcessing.CompareExchange(true, false) == false)
         {
@@ -131,8 +128,5 @@ internal class TaskQueue : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _isDisposed.Cancel();
-    }
+    public void Dispose() => _isDisposed.Cancel();
 }

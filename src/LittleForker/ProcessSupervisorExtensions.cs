@@ -1,14 +1,14 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
 
 namespace LittleForker;
 
 public static class ProcessSupervisorExtensions
 {
     public static Task WhenStateIs(
-        this ProcessSupervisor  processSupervisor,
+        this ProcessSupervisor processSupervisor,
         ProcessSupervisor.State processState,
-        CancellationToken       cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         var taskCompletionSource = new TaskCompletionSource<int>();
         var registration = cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
@@ -46,13 +46,13 @@ public static class ProcessSupervisorExtensions
 
     public static Task WhenOutputStartsWith(
         this ProcessSupervisor processSupervisor,
-        string                 startsWith,
-        CancellationToken      cancellationToken = default)
+        string startsWith,
+        CancellationToken cancellationToken = default)
     {
         var taskCompletionSource = new TaskCompletionSource<int>();
         var registration = cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
 
-        void Handler(string data)
+        void Handler(string? data)
         {
             if (data != null && data.StartsWith(startsWith))
             {

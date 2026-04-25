@@ -1,5 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
@@ -70,7 +71,7 @@ public sealed class ProcessExitedHelperTests
             "dotnet",
             $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo.Id}");
         childSupervisor.OutputDataReceived += data => Console.WriteLine($"Child: {data}");
-        var childIsRunning  = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
+        var childIsRunning = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
         var childHasStopped = childSupervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
         await childSupervisor.Start();
         await childIsRunning;

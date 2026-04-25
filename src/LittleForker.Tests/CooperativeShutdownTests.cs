@@ -1,6 +1,7 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;

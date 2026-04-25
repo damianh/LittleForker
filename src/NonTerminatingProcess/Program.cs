@@ -1,7 +1,7 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using LittleForker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,13 +36,13 @@ if (exitWithNonZero)
 }
 
 var pid = Environment.ProcessId;
-logger.Information($"Long running process started. PID={pid}");
+logger.Information("Long running process started. PID={Pid}", pid);
 
 var parentPid = configRoot.GetValue<int?>("ParentProcessId");
 
 using (parentPid.HasValue
     ? new ProcessExitedHelper(parentPid.Value, _ => ParentExited(parentPid.Value), new NullLoggerFactory())
-    : NoopDisposable.Instance)
+    : (IDisposable)NoopDisposable.Instance)
 {
     using (await CooperativeShutdown.Listen(ExitRequested, new NullLoggerFactory()))
     {
@@ -72,14 +72,13 @@ void ExitRequested()
 
 void ParentExited(int processId)
 {
-    Log.Logger.Information($"Parent process {processId} exited.");
+    Log.Logger.Information("Parent process {ProcessId} exited.", processId);
     shutdown.Cancel();
 }
 
-class NoopDisposable : IDisposable
+sealed class NoopDisposable : IDisposable
 {
-    public void Dispose()
-    { }
+    public void Dispose() { }
 
     internal static readonly IDisposable Instance = new NoopDisposable();
 }

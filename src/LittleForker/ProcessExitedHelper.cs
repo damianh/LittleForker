@@ -1,6 +1,7 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Diagnostics;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace LittleForker;
@@ -11,8 +12,8 @@ namespace LittleForker;
 /// </summary>
 public sealed class ProcessExitedHelper : IDisposable
 {
-    private          int     _processExitedRaised;
-    private readonly Process _process;
+    private int _processExitedRaised;
+    private readonly Process? _process;
 
     /// <summary>
     ///     Initializes a new instance of <see cref="ProcessExitedHelper"/>
@@ -29,9 +30,9 @@ public sealed class ProcessExitedHelper : IDisposable
     ///     A logger.
     /// </param>
     public ProcessExitedHelper(
-        int                         processId,
+        int processId,
         Action<ProcessExitedHelper> processExited,
-        ILoggerFactory              loggerFactory)
+        ILoggerFactory loggerFactory)
     {
         ProcessId = processId;
         var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessExitedHelper)}");
@@ -51,7 +52,7 @@ public sealed class ProcessExitedHelper : IDisposable
         try
         {
             _process.EnableRaisingEvents = true;
-            _process.Exited += (_, __) =>
+            _process.Exited += (_, _) =>
             {
                 logger.LogInformation("Parent process with Id {ProcessId} exited.", processId);
                 OnProcessExit();
@@ -59,7 +60,7 @@ public sealed class ProcessExitedHelper : IDisposable
         }
         // Race condition: this may be thrown if the process has already exited before
         // attaching to the Exited event
-        catch (InvalidOperationException ex) 
+        catch (InvalidOperationException ex)
         {
             logger.LogInformation(ex, "Process with Id {ProcessId} has already exited.", processId);
             OnProcessExit();
@@ -83,8 +84,5 @@ public sealed class ProcessExitedHelper : IDisposable
 
     public int ProcessId { get; }
 
-    public void Dispose()
-    {
-        _process?.Dispose();
-    }
+    public void Dispose() => _process?.Dispose();
 }

@@ -1,9 +1,8 @@
-﻿using System;
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+
 using System.Diagnostics;
-using System.IO;
 using System.IO.Pipes;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace LittleForker;
@@ -43,10 +42,8 @@ public static class CooperativeShutdown
     /// <returns>
     ///     A disposable representing the named pipe listener.
     /// </returns>
-    public static Task<IDisposable> Listen(Action shutdownRequested, ILoggerFactory loggerFactory, Action<Exception> onError = default)
-    {
-        return Listen(shutdownRequested, loggerFactory, nonce: null, onError: onError);
-    }
+    public static Task<IDisposable> Listen(Action shutdownRequested, ILoggerFactory loggerFactory, Action<Exception>? onError = default)
+        => Listen(shutdownRequested, loggerFactory, nonce: null, onError: onError);
 
     /// <summary>
     ///     Creates a listener for cooperative shutdown with an optional security nonce.
@@ -72,8 +69,8 @@ public static class CooperativeShutdown
     public static Task<IDisposable> Listen(
         Action shutdownRequested,
         ILoggerFactory loggerFactory,
-        string nonce,
-        Action<Exception> onError = default)
+        string? nonce,
+        Action<Exception>? onError = default)
     {
         var processId = Process.GetCurrentProcess().Id;
         var pipeName = nonce != null
@@ -84,7 +81,7 @@ public static class CooperativeShutdown
             pipeName,
             shutdownRequested,
             loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}"));
-            
+
         Task.Run(async () =>
         {
             try
@@ -111,9 +108,7 @@ public static class CooperativeShutdown
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns>A task representing the operation.</returns>
     public static async Task SignalExit(int processId, ILoggerFactory loggerFactory)
-    {
-        await TrySignalExit(processId, loggerFactory).ConfigureAwait(false);
-    }
+        => await TrySignalExit(processId, loggerFactory).ConfigureAwait(false);
 
     /// <summary>
     ///     Signals to a process to shut down using a security nonce.
@@ -123,9 +118,7 @@ public static class CooperativeShutdown
     /// <param name="nonce">The security nonce shared between parent and child process.</param>
     /// <returns>A task representing the operation.</returns>
     public static async Task SignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
-    {
-        await TrySignalExit(processId, loggerFactory, nonce).ConfigureAwait(false);
-    }
+        => await TrySignalExit(processId, loggerFactory, nonce).ConfigureAwait(false);
 
     /// <summary>
     ///     Signals to a process to shut down, returning whether the signal was delivered.
@@ -134,9 +127,7 @@ public static class CooperativeShutdown
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory)
-    {
-        return TrySignalExitCore(processId, loggerFactory, GetPipeName(processId));
-    }
+        => TrySignalExitCore(processId, loggerFactory, GetPipeName(processId));
 
     /// <summary>
     ///     Signals to a process to shut down using a security nonce, returning whether the signal was delivered.
@@ -146,9 +137,7 @@ public static class CooperativeShutdown
     /// <param name="nonce">The security nonce shared between parent and child process.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
-    {
-        return TrySignalExitCore(processId, loggerFactory, GetPipeName(processId, nonce));
-    }
+        => TrySignalExitCore(processId, loggerFactory, GetPipeName(processId, nonce));
 
     private static async Task<bool> TrySignalExitCore(int processId, ILoggerFactory loggerFactory, string pipeName)
     {
@@ -161,7 +150,7 @@ public static class CooperativeShutdown
                 var streamWriter = new StreamWriter(pipe);
                 var streamReader = new StreamReader(pipe, true);
                 logger.LogInformation("Signalling EXIT to client on pipe {PipeName}...", pipeName);
-                await SignalExit(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
+                await SignalExitCore(streamWriter, streamReader).TimeoutAfter(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
                 logger.LogInformation("Signalling EXIT to client on pipe {PipeName} successful.", pipeName);
                 return true;
             }
@@ -183,7 +172,7 @@ public static class CooperativeShutdown
         }
     }
 
-    private static async Task SignalExit(TextWriter streamWriter, TextReader streamReader)
+    private static async Task SignalExitCore(TextWriter streamWriter, TextReader streamReader)
     {
         await streamWriter.WriteLineAsync("EXIT").ConfigureAwait(false);
         await streamWriter.FlushAsync().ConfigureAwait(false);
@@ -192,20 +181,20 @@ public static class CooperativeShutdown
 
     private sealed class CooperativeShutdownListener : IDisposable
     {
-        private readonly string                  _pipeName;
-        private readonly Action                  _shutdownRequested;
-        private readonly ILogger                 _logger;
+        private readonly string _pipeName;
+        private readonly Action _shutdownRequested;
+        private readonly ILogger _logger;
         private readonly CancellationTokenSource _stopListening;
 
         internal CooperativeShutdownListener(
-            string  pipeName,
-            Action  shutdownRequested,
+            string pipeName,
+            Action shutdownRequested,
             ILogger logger)
         {
-            _pipeName          = pipeName;
+            _pipeName = pipeName;
             _shutdownRequested = shutdownRequested;
-            _logger            = logger;
-            _stopListening     = new CancellationTokenSource();
+            _logger = logger;
+            _stopListening = new CancellationTokenSource();
         }
 
         internal async Task Listen()
@@ -280,9 +269,6 @@ public static class CooperativeShutdown
             }
         }
 
-        public void Dispose()
-        {
-            _stopListening.Cancel();
-        }
+        public void Dispose() => _stopListening.Cancel();
     }
 }

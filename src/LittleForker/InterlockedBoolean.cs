@@ -1,30 +1,28 @@
-﻿// 
+// Copyright (c) Damian Hickey. All rights reserved.
+// See LICENSE in the project root for license information.
+//
 // Copyright 2013 Hans Wolff
 //
 // Source: https://gist.github.com/hanswolff/7926751
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// 
-
-
-using System.Threading;
 
 namespace LittleForker;
 
 /// <summary>
 /// Interlocked support for boolean values
 /// </summary>
-internal class InterlockedBoolean
+internal sealed class InterlockedBoolean
 {
     private int _value;
 
@@ -37,10 +35,7 @@ internal class InterlockedBoolean
     /// Initializes a new instance of <see cref="T:InterlockedBoolean"/>
     /// </summary>
     /// <param name="initialValue">initial value</param>
-    public InterlockedBoolean(bool initialValue = false)
-    {
-        _value = initialValue ? 1 : 0;
-    }
+    public InterlockedBoolean(bool initialValue = false) => _value = initialValue ? 1 : 0;
 
     /// <summary>
     /// Sets a new value
@@ -54,7 +49,7 @@ internal class InterlockedBoolean
     }
 
     /// <summary>
-    /// Compares the current value and the comparand for equality and, if they are equal, 
+    /// Compares the current value and the comparand for equality and, if they are equal,
     /// replaces the current value with the new value in an atomic/thread-safe operation.
     /// </summary>
     /// <param name="newValue">new value</param>

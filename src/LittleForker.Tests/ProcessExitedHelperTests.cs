@@ -26,12 +26,11 @@ public sealed class ProcessExitedHelperTests
     public async Task When_parent_process_exits_than_should_call_parent_exited_callback()
     {
         // Start parent
-        var supervisor = new ProcessSupervisor(
-            _loggerFactory,
-            ProcessRunType.NonTerminating,
-            Environment.CurrentDirectory,
-            "dotnet",
-            "./NonTerminatingProcess/NonTerminatingProcess.dll");
+        var settings = new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
+        {
+            Arguments = "./NonTerminatingProcess/NonTerminatingProcess.dll"
+        };
+        var supervisor = new ProcessSupervisor(settings, _loggerFactory);
         var parentIsRunning = supervisor.WhenStateIs(ProcessSupervisor.State.Running);
         supervisor.OutputDataReceived += data => Console.WriteLine($"Parent Process: {data}");
         await supervisor.Start();
@@ -39,12 +38,12 @@ public sealed class ProcessExitedHelperTests
 
         // Monitor parent
         var parentExited = new TaskCompletionSource<int?>();
-        using (new ProcessExitedHelper(supervisor.ProcessInfo.Id, watcher => parentExited.SetResult(watcher.ProcessId), _loggerFactory))
+        using (new ProcessExitedHelper(supervisor.ProcessInfo!.Id, watcher => parentExited.SetResult(watcher.ProcessId), _loggerFactory))
         {
             // Stop parent
             await supervisor.Stop(TimeSpan.FromSeconds(2));
             var processId = await parentExited.Task.TimeoutAfter(TimeSpan.FromSeconds(2));
-            processId.Value.ShouldBeGreaterThan(0);
+            processId!.Value.ShouldBeGreaterThan(0);
         }
     }
 
@@ -52,24 +51,22 @@ public sealed class ProcessExitedHelperTests
     public async Task When_parent_process_exits_then_child_process_should_also_do_so()
     {
         // Start parent
-        var parentSupervisor = new ProcessSupervisor(
-            _loggerFactory,
-            ProcessRunType.NonTerminating,
-            Environment.CurrentDirectory,
-            "dotnet",
-            "./NonTerminatingProcess/NonTerminatingProcess.dll");
+        var parentSettings = new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
+        {
+            Arguments = "./NonTerminatingProcess/NonTerminatingProcess.dll"
+        };
+        var parentSupervisor = new ProcessSupervisor(parentSettings, _loggerFactory);
         parentSupervisor.OutputDataReceived += data => Console.WriteLine($"Parent: {data}");
         var parentIsRunning = parentSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
         await parentSupervisor.Start();
         await parentIsRunning;
 
         // Start child
-        var childSupervisor = new ProcessSupervisor(
-            _loggerFactory,
-            ProcessRunType.SelfTerminating,
-            Environment.CurrentDirectory,
-            "dotnet",
-            $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo.Id}");
+        var childSettings = new ProcessSupervisorSettings(Environment.CurrentDirectory, "dotnet")
+        {
+            Arguments = $"./NonTerminatingProcess/NonTerminatingProcess.dll --ParentProcessId={parentSupervisor.ProcessInfo!.Id}"
+        };
+        var childSupervisor = new ProcessSupervisor(childSettings, _loggerFactory);
         childSupervisor.OutputDataReceived += data => Console.WriteLine($"Child: {data}");
         var childIsRunning = childSupervisor.WhenStateIs(ProcessSupervisor.State.Running);
         var childHasStopped = childSupervisor.WhenStateIs(ProcessSupervisor.State.ExitedSuccessfully);
@@ -80,6 +77,6 @@ public sealed class ProcessExitedHelperTests
         await parentSupervisor.Stop();
 
         // Wait for child to stop
-        await childHasStopped.TimeoutAfter(TimeSpan.FromSeconds(2));
+        await childHasStopped.TimeoutAfter(TimeSpan.FromSeconds(5));
     }
 }

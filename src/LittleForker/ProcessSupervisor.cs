@@ -1,7 +1,6 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
 
-using System.Collections.Specialized;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Stateless;
@@ -16,7 +15,7 @@ public class ProcessSupervisor : IDisposable
 {
     private readonly ILogger _logger;
     private readonly string _arguments;
-    private readonly StringDictionary? _environmentVariables;
+    private readonly System.Collections.Specialized.StringDictionary? _environmentVariables;
     private readonly bool _captureStdErr;
     private readonly string _processPath;
     private readonly StateMachine<State, Trigger>.TriggerWithParameters<Exception> _startErrorTrigger;
@@ -39,7 +38,6 @@ public class ProcessSupervisor : IDisposable
         Stopping,
         ExitedSuccessfully,
         ExitedWithError,
-        ExitedUnexpectedly,
         ExitedKilled
     }
 
@@ -52,46 +50,20 @@ public class ProcessSupervisor : IDisposable
     }
 
     /// <summary>
-    ///     Initializes a new instance of <see cref="ProcessSupervisor"/>
+    ///     Initializes a new instance of <see cref="ProcessSupervisor"/>.
     /// </summary>
-    /// <param name="workingDirectory">
-    ///     The working directory to start the process in.
-    /// </param>
-    /// <param name="processPath">
-    ///     The path to the process.
-    /// </param>
-    /// <param name="processRunType">
-    ///     The process run type.
-    /// </param>
-    /// <param name="loggerFactory">
-    ///     A logger factory.
-    /// </param>
-    /// <param name="arguments">
-    ///     Arguments to be passed to the process.
-    /// </param>
-    /// <param name="environmentVariables">
-    ///     Environment variables that are set before the process starts.
-    /// </param>
-    /// <param name="captureStdErr">
-    ///     A flag to indicated whether to capture standard error output.
-    /// </param>
-    public ProcessSupervisor(
-        ILoggerFactory loggerFactory,
-        ProcessRunType processRunType,
-        string workingDirectory,
-        string processPath,
-        string? arguments = null,
-        StringDictionary? environmentVariables = null,
-        bool captureStdErr = false)
+    /// <param name="settings">The settings used to launch and configure the process.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    public ProcessSupervisor(ProcessSupervisorSettings settings, ILoggerFactory loggerFactory)
     {
         _loggerFactory = loggerFactory;
-        _workingDirectory = workingDirectory;
-        _processPath = processPath;
-        _arguments = arguments ?? string.Empty;
-        _environmentVariables = environmentVariables;
-        _captureStdErr = captureStdErr;
+        _workingDirectory = settings.WorkingDirectory;
+        _processPath = settings.ProcessPath;
+        _arguments = settings.Arguments ?? string.Empty;
+        _environmentVariables = settings.EnvironmentVariables;
+        _captureStdErr = settings.CaptureStdErr;
 
-        _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{processPath}");
+        _logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(ProcessSupervisor)}-{settings.ProcessPath}");
 
         _processStateMachine
             .Configure(State.NotStarted)
@@ -106,23 +78,13 @@ public class ProcessSupervisor : IDisposable
             .PermitIf(
                 Trigger.ProcessExit,
                 State.ExitedSuccessfully,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && _process!.HasExited
-                      && _process!.ExitCode == 0,
-                "SelfTerminating && ExitCode==0")
+                () => _process!.HasExited && _process!.ExitCode == 0,
+                "ExitCode==0")
             .PermitIf(
                 Trigger.ProcessExit,
                 State.ExitedWithError,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && _process!.HasExited
-                      && _process!.ExitCode != 0,
-                "SelfTerminating && ExitCode!=0")
-            .PermitIf(
-                Trigger.ProcessExit,
-                State.ExitedUnexpectedly,
-                () => processRunType == ProcessRunType.NonTerminating
-                      && _process!.HasExited,
-                "NonTerminating and died.")
+                () => _process!.HasExited && _process!.ExitCode != 0,
+                "ExitCode!=0")
             .Permit(Trigger.Stop, State.Stopping)
             .Permit(Trigger.StartError, State.StartFailed);
 
@@ -134,47 +96,14 @@ public class ProcessSupervisor : IDisposable
             .Configure(State.Stopping)
             .OnEntryFromAsync(_stopTrigger, OnStop)
             .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
-                () => processRunType == ProcessRunType.NonTerminating
-                      && !_killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode == 0,
-                "NonTerminating and shut down cleanly")
+                () => !_killed.Value && _process!.HasExited && _process!.ExitCode == 0,
+                "Shut down cleanly")
             .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
-                () => processRunType == ProcessRunType.NonTerminating
-                      && !_killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode != 0,
-                "NonTerminating and shut down with non-zero exit code")
+                () => !_killed.Value && _process!.HasExited && _process!.ExitCode != 0,
+                "Shut down with non-zero exit code")
             .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                () => processRunType == ProcessRunType.NonTerminating
-                      && _killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode != 0,
-                "NonTerminating and killed.")
-            .PermitIf(Trigger.ProcessExit, State.ExitedSuccessfully,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && !_killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode == 0,
-                "SelfTerminating and shut down cleanly")
-            .PermitIf(Trigger.ProcessExit, State.ExitedWithError,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && !_killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode != 0,
-                "SelfTerminating and shut down with non-zero exit code")
-            .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && _killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode != 0,
-                "SelfTerminating and killed with non-zero exit code")
-            .PermitIf(Trigger.ProcessExit, State.ExitedKilled,
-                () => processRunType == ProcessRunType.SelfTerminating
-                      && _killed.Value
-                      && _process!.HasExited
-                      && _process!.ExitCode == 0,
-                "SelfTerminating and killed but exited cleanly");
+                () => _killed.Value && _process!.HasExited,
+                "Killed");
 
         _processStateMachine
             .Configure(State.StartFailed)
@@ -182,10 +111,6 @@ public class ProcessSupervisor : IDisposable
 
         _processStateMachine
             .Configure(State.ExitedSuccessfully)
-            .Permit(Trigger.Start, State.Running);
-
-        _processStateMachine
-            .Configure(State.ExitedUnexpectedly)
             .Permit(Trigger.Start, State.Running);
 
         _processStateMachine
@@ -255,12 +180,10 @@ public class ProcessSupervisor : IDisposable
     /// </summary>
     /// <param name="timeout"></param>
     /// <returns></returns>
-    public async Task Stop(TimeSpan? timeout = null)
-    {
+    public async Task Stop(TimeSpan? timeout = null) =>
         await await _taskQueue
             .Enqueue(() => _processStateMachine.FireAsync(_stopTrigger, timeout))
             .ConfigureAwait(false);
-    }
 
     private void OnStart()
     {
@@ -350,11 +273,6 @@ public class ProcessSupervisor : IDisposable
         {
             try
             {
-                // Signal process to exit. If no response from process (busy or
-                // doesn't support signaling, then this will timeout. Note: a
-                // process acknowledging that it has received an EXIT signal
-                // only means the process has _started_ to shut down.
-
                 var sw = Stopwatch.StartNew();
 
                 var exited = this.WhenStateIs(State.ExitedSuccessfully);
@@ -366,7 +284,6 @@ public class ProcessSupervisor : IDisposable
 
                 if (!signaled)
                 {
-                    // Signal failed — skip waiting and go straight to kill.
                     throw new TimeoutException("Cooperative shutdown signal failed.");
                 }
 
@@ -383,10 +300,6 @@ public class ProcessSupervisor : IDisposable
             }
             catch (TimeoutException)
             {
-                // Process doesn't support EXIT signal OR it didn't respond in
-                // time so Kill it. Note: still a race condition - the EXIT
-                // signal may have been received but just not acknowledged in
-                // time.
                 try
                 {
                     _logger.LogWarning(

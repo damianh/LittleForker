@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\shared.props" />
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>..\LittleForker.Tests\SelfTerminatingProcess\</OutputPath>
-  </PropertyGroup>
-
-</Project>

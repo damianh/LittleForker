@@ -7,16 +7,14 @@ internal static class TaskExtensions
 {
     // https://stackoverflow.com/a/28626769
 
-    internal static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
-    {
-        return task.IsCompleted // fast-path optimization
+    internal static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken) =>
+        task.IsCompleted // fast-path optimization
             ? task
             : task.ContinueWith(
                 completedTask => completedTask.GetAwaiter().GetResult(),
                 cancellationToken,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
-    }
 
     internal static async Task TimeoutAfter(this Task task, TimeSpan timeout)
     {

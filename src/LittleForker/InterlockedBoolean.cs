@@ -1,6 +1,6 @@
 // Copyright (c) Damian Hickey. All rights reserved.
 // See LICENSE in the project root for license information.
-//
+
 // Copyright 2013 Hans Wolff
 //
 // Source: https://gist.github.com/hanswolff/7926751

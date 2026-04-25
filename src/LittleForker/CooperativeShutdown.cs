@@ -121,13 +121,22 @@ public static class CooperativeShutdown
         => await TrySignalExit(processId, loggerFactory, nonce).ConfigureAwait(false);
 
     /// <summary>
+    ///     Signals to a process to shut down using an explicit pipe name.
+    /// </summary>
+    /// <param name="pipeName">The pipe name to signal on.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    /// <returns>A task representing the operation.</returns>
+    public static async Task SignalExit(string pipeName, ILoggerFactory loggerFactory)
+        => await TrySignalExit(pipeName, loggerFactory).ConfigureAwait(false);
+
+    /// <summary>
     ///     Signals to a process to shut down, returning whether the signal was delivered.
     /// </summary>
     /// <param name="processId">The process ID to signal too.</param>
     /// <param name="loggerFactory">A logger factory.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory)
-        => TrySignalExitCore(processId, loggerFactory, GetPipeName(processId));
+        => TrySignalExitCore(loggerFactory, GetPipeName(processId));
 
     /// <summary>
     ///     Signals to a process to shut down using a security nonce, returning whether the signal was delivered.
@@ -137,9 +146,18 @@ public static class CooperativeShutdown
     /// <param name="nonce">The security nonce shared between parent and child process.</param>
     /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
     internal static Task<bool> TrySignalExit(int processId, ILoggerFactory loggerFactory, string nonce)
-        => TrySignalExitCore(processId, loggerFactory, GetPipeName(processId, nonce));
+        => TrySignalExitCore(loggerFactory, GetPipeName(processId, nonce));
 
-    private static async Task<bool> TrySignalExitCore(int processId, ILoggerFactory loggerFactory, string pipeName)
+    /// <summary>
+    ///     Signals to a process to shut down using an explicit pipe name, returning whether the signal was delivered.
+    /// </summary>
+    /// <param name="pipeName">The pipe name to signal on.</param>
+    /// <param name="loggerFactory">A logger factory.</param>
+    /// <returns><c>true</c> if the EXIT signal was successfully delivered; <c>false</c> on failure.</returns>
+    internal static Task<bool> TrySignalExit(string pipeName, ILoggerFactory loggerFactory)
+        => TrySignalExitCore(loggerFactory, pipeName);
+
+    private static async Task<bool> TrySignalExitCore(ILoggerFactory loggerFactory, string pipeName)
     {
         var logger = loggerFactory.CreateLogger($"{nameof(LittleForker)}.{nameof(CooperativeShutdown)}");
         using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))

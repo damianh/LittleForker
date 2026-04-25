@@ -1,9 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\shared.props" />
   <PropertyGroup>
-    <TargetFrameworks>net10.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <LangVersion>latest</LangVersion>
     <RootNamespace>LittleForker</RootNamespace>
   </PropertyGroup>
 
@@ -17,7 +15,6 @@
     <ProjectReference Include="..\LittleForker\LittleForker.csproj" />
   </ItemGroup>
 
-  
   <ItemGroup>
     <None Update="NonTerminatingProcess\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

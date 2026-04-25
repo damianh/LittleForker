@@ -19,6 +19,12 @@ multi-process application.
   3. **CooperativeShutdown**: allows a process to listen for a shutdown signal
      over a named pipe for a parent process to instruct a process to shut down.
 
+  4. **DI-friendly hosted services** for ASP.NET Core / Generic Host applications:
+     - `CooperativeShutdownHostedService` — listens for cooperative shutdown signals
+       and stops the application when received.
+     - `WatchParentProcessHostedService` — monitors a parent process and stops the
+       application when the parent exits.
+
 ## Installation
 
 ```bash
@@ -84,12 +90,6 @@ Process supervisor launches a process and tracks its lifecycle represented as a
 state machine. Typical use case is a "parent" process launching one or more "child"
 processes.
 
-There are two types of processes that are supported:
-
-1. **Self-Terminating** where the process will exit of its own accord.
-2. **Non-Terminating** is a process that will not shut down unless it is
-   signalled to do so (if it participates in cooperative shutdown) _or_ is killed.
-
 A process's state is represented by `ProcessSupervisor.State` enum:
 
 - NotStarted
@@ -98,17 +98,14 @@ A process's state is represented by `ProcessSupervisor.State` enum:
 - Stopping
 - ExitedSuccessfully
 - ExitedWithError
-- ExitedUnexpectedly
 - ExitedKilled
 
-... with the transitions between them described with this state machine depending
-on whether self-terminating or non-terminating:
+... with the transitions between them described with this state machine:
 
 ![statemachine](state-machine.png)
 
 All terminal states (`StartFailed`, `ExitedSuccessfully`, `ExitedWithError`,
-`ExitedUnexpectedly`, `ExitedKilled`) permit restarting by calling `Start()`
-again.
+`ExitedKilled`) permit restarting by calling `Start()` again.
 
 Typically, you will want to launch a process and wait until it is in a specific
 state before continuing (or handle errors).
@@ -116,13 +113,14 @@ state before continuing (or handle errors).
 ```csharp
 var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
-// create the supervisor
-var supervisor = new ProcessSupervisor(
-   loggerFactory,
-   processRunType: ProcessRunType.NonTerminating,
-   workingDirectory: Environment.CurrentDirectory,
-   processPath: "dotnet",
-   arguments: "./LongRunningProcess/LongRunningProcess.dll");
+var settings = new ProcessSupervisorSettings(
+    workingDirectory: Environment.CurrentDirectory,
+    processPath: "dotnet")
+{
+    Arguments = "./LongRunningProcess/LongRunningProcess.dll"
+};
+
+var supervisor = new ProcessSupervisor(settings, loggerFactory);
 
 // attach to events
 supervisor.StateChanged += state => { /* handle state changes */ };
@@ -134,7 +132,6 @@ await supervisor.Start();
 // ... some time later
 // attempts a cooperative shutdown with a timeout of 3
 // seconds otherwise kills the process
-
 await supervisor.Stop(TimeSpan.FromSeconds(3));
 ```
 
@@ -174,9 +171,8 @@ to acknowledge receipt of the request and shut down cleanly (and fast!). Combine
 `Supervisor.Stop()` a parent can send the signal and then wait for `ExitedSuccessfully`.
 
 The inter-process communication is done via named pipes where the pipe name is
-of the format `LittleForker-{processId}`. When a security nonce is provided, the
-format becomes `LittleForker-{processId}-{nonce}` which prevents other local
-processes from sending unsolicited EXIT signals.
+of the format `LittleForker-{processId}`. On Windows, pipe access is restricted
+to the current user via `PipeSecurity` ACLs.
 
 For a "child" process to be able to receive cooperative shutdown requests it uses
 `CooperativeShutdown.Listen()` to listen on a named pipe. Handling signals should
@@ -204,8 +200,10 @@ you typically won't need to call this directly.
 
 #### Security nonce
 
-To prevent other local processes from connecting to the pipe, you can use a
-shared nonce known to both parent and child:
+To prevent other local processes from sending unsolicited EXIT signals, you can
+use a shared nonce known to both parent and child. The nonce is validated over
+the wire protocol (not embedded in the pipe name), so it cannot be discovered
+by enumerating named pipes.
 
 ```csharp
 // Child process — read nonce from environment variable set by parent
@@ -217,6 +215,60 @@ using (await CooperativeShutdown.Listen(() => shutdown.Cancel(), loggerFactory, 
 
 // Parent process — signal with the same nonce
 await CooperativeShutdown.SignalExit(childProcessId, loggerFactory, nonce);
+```
+
+### 4. DI / Hosted Service Integration
+
+For applications using the .NET Generic Host (`Microsoft.Extensions.Hosting`),
+LittleForker provides hosted services that can be registered via dependency
+injection. This is the recommended approach for ASP.NET Core and worker service
+applications.
+
+#### CooperativeShutdownHostedService
+
+Listens for a cooperative shutdown signal and calls
+`IHostApplicationLifetime.StopApplication()` when received:
+
+```csharp
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services =>
+    {
+        // Default: listens on pipe "LittleForker-{pid}"
+        services.AddCooperativeShutdownHostedService();
+
+        // Or with a security nonce:
+        services.AddCooperativeShutdownHostedService(o =>
+            o.Nonce = Environment.GetEnvironmentVariable("LITTLEFORKER_NONCE"));
+
+        // Or with an explicit pipe name:
+        services.AddCooperativeShutdownHostedService(o =>
+            o.PipeName = "my-custom-pipe");
+    })
+    .Build();
+
+await host.RunAsync();
+```
+
+#### WatchParentProcessHostedService
+
+Monitors a parent process and stops the application when the parent exits.
+This is a safeguard in case cooperative shutdown fails (e.g. the parent crashed):
+
+```csharp
+var parentPid = config.GetValue<int?>("ParentProcessId");
+
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices(services =>
+    {
+        if (parentPid.HasValue)
+        {
+            services.AddWatchParentProcessHostedService(o =>
+                o.ParentProcessId = parentPid);
+        }
+    })
+    .Build();
+
+await host.RunAsync();
 ```
 
 ## Building
